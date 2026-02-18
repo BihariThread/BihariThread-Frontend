@@ -1,165 +1,429 @@
 'use client';
 
-import React from 'react';
+import { useCartStore } from '@/store/cartStore';
+import { useAuthStore } from '@/store/authStore';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Minus, Plus, X, ArrowRight, ShoppingBag } from 'lucide-react';
-import LayoutWrapper from '@/components/LayoutWrapper';
-import Button from '@/components/Button';
-import { useCartStore } from '@/store/cartStore';
+import { Trash2, Plus, Minus, CreditCard, Banknote, Landmark, CheckCircle, ArrowLeft, Loader2, MapPin } from 'lucide-react';
+import { toast } from 'sonner';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import FadeIn from '@/components/FadeIn';
+
+type CheckoutStep = 'cart' | 'address' | 'payment' | 'success';
 
 export default function CartPage() {
-    const { items, removeItem, updateQuantity, getTotal } = useCartStore();
+    const { items, removeItem, updateQuantity, getTotal, clearCart } = useCartStore();
+    const { isLoggedIn, user, openAuthModal, addAddress } = useAuthStore();
+    const router = useRouter();
+    const [step, setStep] = useState<CheckoutStep>('cart');
+    const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+    const [paymentMethod, setPaymentMethod] = useState<'cod' | 'upi' | 'card'>('cod');
+    const [isAddingAddress, setIsAddingAddress] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
 
-    const subtotal = getTotal();
-    const shipping = subtotal > 999 ? 0 : 99;
-    const total = subtotal + shipping;
+    const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
-    if (items.length === 0) {
+    const total = getTotal();
+    const shipping = 0; // Free shipping
+    const finalTotal = total + shipping;
+
+    const handleProceedToCheckout = () => {
+        if (!isLoggedIn) {
+            toast.error('Please login to checkout');
+            openAuthModal();
+            return;
+        }
+        if (items.length === 0) {
+            toast.error('Your cart is empty');
+            return;
+        }
+        setStep('address');
+    };
+
+    const handleAddressSelection = () => {
+        if (!selectedAddress) {
+            toast.error('Please select a shipping address');
+            return;
+        }
+        setStep('payment');
+    };
+
+    const handlePlaceOrder = async () => {
+        setIsProcessing(true);
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        toast.success('Order placed successfully!');
+        clearCart();
+        setStep('success');
+        setIsProcessing(false);
+    };
+
+    const onSubmitAddress = (data: any) => {
+        const newAddress = {
+            id: Math.random().toString(36).substr(2, 9),
+            ...data,
+            type: 'shipping',
+            isDefault: false,
+        };
+        addAddress(newAddress);
+        setIsAddingAddress(false);
+        setSelectedAddress(newAddress.id);
+        reset();
+        toast.success('Address added successfully');
+    };
+
+    if (step === 'success') {
         return (
-            <LayoutWrapper>
-                <div className="pt-28 pb-16 min-h-screen flex flex-col items-center justify-center px-4 page-enter">
-                    <div className="w-20 h-20 bg-grey-100 rounded-full flex items-center justify-center mb-6">
-                        <ShoppingBag size={32} className="text-grey-400" />
-                    </div>
-                    <h1 className="font-heading text-2xl font-black uppercase tracking-wider text-black text-center">
-                        Your Cart is Empty
-                    </h1>
-                    <p className="font-body text-grey-500 mt-3 text-center">
-                        Looks like you haven&apos;t added anything yet.
-                    </p>
-                    <Link href="/shop" className="mt-8">
-                        <Button variant="accent" size="lg">
-                            Start Shopping <ArrowRight size={16} className="ml-2" />
-                        </Button>
-                    </Link>
-                </div>
-            </LayoutWrapper>
+            <div className="min-h-screen bg-background flex flex-col">
+                <Header />
+                <main className="flex-grow flex items-center justify-center p-4">
+                    <FadeIn>
+                        <div className="text-center py-12 px-4 max-w-lg mx-auto bg-card border border-border rounded-2xl shadow-sm">
+                            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <CheckCircle className="text-green-600 w-10 h-10" />
+                            </div>
+                            <h1 className="text-3xl font-montserrat font-bold text-foreground mb-4">Order Confirmed!</h1>
+                            <p className="text-muted-foreground mb-8 text-lg">
+                                Thank you for your purchase. Your order has been placed successfully and will be shipped soon.
+                            </p>
+                            <Link href="/">
+                                <button className="px-8 py-3 bg-primary text-primary-foreground rounded-full font-semibold hover:opacity-90 transition-all shadow-md">
+                                    Continue Shopping
+                                </button>
+                            </Link>
+                        </div>
+                    </FadeIn>
+                </main>
+                <Footer />
+            </div>
         );
     }
 
     return (
-        <LayoutWrapper>
-            <div className="pt-24 sm:pt-28 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto page-enter">
-                <h1 className="font-heading text-2xl sm:text-3xl md:text-4xl font-black uppercase tracking-wider text-black mb-10">
-                    Your Cart
-                </h1>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
-                    {/* Cart Items */}
-                    <div className="lg:col-span-2 space-y-4">
-                        {items.map((item) => (
-                            <div
-                                key={`${item.product.id}-${item.size}`}
-                                className="flex gap-4 sm:gap-6 bg-white rounded-2xl p-4 sm:p-6 transition-all duration-200 hover:shadow-md"
-                            >
-                                {/* Image */}
-                                <Link href={`/product/${item.product.id}`} className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-xl overflow-hidden shrink-0">
-                                    <Image
-                                        src={item.product.images[0]}
-                                        alt={item.product.name}
-                                        fill
-                                        className="object-cover"
-                                    />
-                                </Link>
-
-                                {/* Details */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="min-w-0">
-                                            <Link href={`/product/${item.product.id}`}>
-                                                <h3 className="font-heading text-sm font-bold uppercase tracking-wider text-black truncate hover:text-terracotta transition-colors">
-                                                    {item.product.name}
-                                                </h3>
-                                            </Link>
-                                            <p className="text-grey-500 text-xs font-body mt-1">
-                                                Size: {item.size} • {item.color}
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={() => removeItem(item.product.id, item.size)}
-                                            className="p-1.5 hover:bg-grey-100 rounded-lg transition-colors cursor-pointer shrink-0"
-                                            aria-label="Remove item"
-                                        >
-                                            <X size={16} className="text-grey-400" />
-                                        </button>
-                                    </div>
-
-                                    <div className="flex items-end justify-between mt-4">
-                                        {/* Quantity */}
-                                        <div className="flex items-center bg-offwhite border border-grey-200 rounded-lg overflow-hidden">
-                                            <button
-                                                onClick={() => updateQuantity(item.product.id, item.size, item.quantity - 1)}
-                                                className="p-2 hover:bg-grey-200 transition-colors cursor-pointer"
-                                                aria-label="Decrease"
-                                            >
-                                                <Minus size={12} />
-                                            </button>
-                                            <span className="px-3 font-heading text-xs font-bold">{item.quantity}</span>
-                                            <button
-                                                onClick={() => updateQuantity(item.product.id, item.size, item.quantity + 1)}
-                                                className="p-2 hover:bg-grey-200 transition-colors cursor-pointer"
-                                                aria-label="Increase"
-                                            >
-                                                <Plus size={12} />
-                                            </button>
-                                        </div>
-
-                                        {/* Price */}
-                                        <p className="font-heading text-sm sm:text-base font-bold text-black">
-                                            ₹{(item.product.price * item.quantity).toLocaleString()}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+        <div className="min-h-screen bg-background flex flex-col">
+            <Header />
+            <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 w-full">
+                {/* Stepper */}
+                <div className="flex items-center justify-center mb-12">
+                    <div className={`flex items-center gap-2 ${step === 'cart' || step === 'address' || step === 'payment' ? 'text-primary' : 'text-muted-foreground'}`}>
+                        <span className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center font-bold">1</span>
+                        <span className="hidden sm:inline font-medium">Cart</span>
                     </div>
-
-                    {/* Order Summary */}
-                    <div className="lg:col-span-1">
-                        <div className="bg-white rounded-2xl p-6 sm:p-8 sticky top-24">
-                            <h2 className="font-heading text-sm font-bold uppercase tracking-widest text-black mb-6">
-                                Order Summary
-                            </h2>
-
-                            <div className="space-y-4 font-body text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-grey-500">Subtotal</span>
-                                    <span className="font-heading font-bold">₹{subtotal.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-grey-500">Shipping</span>
-                                    <span className={`font-heading font-bold ${shipping === 0 ? 'text-green-600' : ''}`}>
-                                        {shipping === 0 ? 'FREE' : `₹${shipping}`}
-                                    </span>
-                                </div>
-                                {shipping > 0 && (
-                                    <p className="text-xs text-grey-400">
-                                        Free shipping on orders above ₹999
-                                    </p>
-                                )}
-                                <hr className="border-grey-200" />
-                                <div className="flex justify-between">
-                                    <span className="font-heading font-bold uppercase tracking-wider text-black">Total</span>
-                                    <span className="font-heading text-lg font-black text-black">₹{total.toLocaleString()}</span>
-                                </div>
-                            </div>
-
-                            <Link href="/checkout" className="block mt-8">
-                                <Button variant="accent" size="lg" fullWidth>
-                                    Checkout <ArrowRight size={16} className="ml-2" />
-                                </Button>
-                            </Link>
-
-                            <Link href="/shop" className="block mt-4">
-                                <Button variant="ghost" size="md" fullWidth>
-                                    Continue Shopping
-                                </Button>
-                            </Link>
-                        </div>
+                    <div className="w-12 h-[2px] bg-border mx-2"></div>
+                    <div className={`flex items-center gap-2 ${step === 'address' || step === 'payment' ? 'text-primary' : 'text-muted-foreground'}`}>
+                        <span className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center font-bold">2</span>
+                        <span className="hidden sm:inline font-medium">Details</span>
+                    </div>
+                    <div className="w-12 h-[2px] bg-border mx-2"></div>
+                    <div className={`flex items-center gap-2 ${step === 'payment' ? 'text-primary' : 'text-muted-foreground'}`}>
+                        <span className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center font-bold">3</span>
+                        <span className="hidden sm:inline font-medium">Payment</span>
                     </div>
                 </div>
-            </div>
-        </LayoutWrapper>
+
+                {step === 'cart' && (
+                    <FadeIn>
+                        <h1 className="text-3xl font-montserrat font-bold text-foreground mb-8">Shopping Cart</h1>
+                        {items.length === 0 ? (
+                            <div className="text-center py-20 bg-muted/20 rounded-2xl border border-dashed border-border">
+                                <p className="text-xl text-muted-foreground mb-6">Your cart is empty.</p>
+                                <Link href="/shop">
+                                    <button className="px-8 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity">
+                                        Browse Products
+                                    </button>
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                <div className="lg:col-span-2 space-y-6">
+                                    {items.map((item) => (
+                                        <div key={`${item.product.id}-${item.size}`} className="flex gap-4 p-4 bg-card border border-border rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                                            <div className="relative w-24 h-24 bg-muted rounded-lg overflow-hidden flex-shrink-0">
+                                                <Image
+                                                    src={item.product.image || '/placeholder.png'}
+                                                    alt={item.product.name}
+                                                    fill
+                                                    className="object-cover"
+                                                />
+                                            </div>
+                                            <div className="flex-grow">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <h3 className="font-montserrat font-semibold text-lg line-clamp-1">{item.product.name}</h3>
+                                                        <p className="text-sm text-muted-foreground mt-1">Size: {item.size} • Color: {item.color}</p>
+                                                    </div>
+                                                    <p className="font-bold text-lg">₹{item.product.price * item.quantity}</p>
+                                                </div>
+                                                <div className="flex justify-between items-center mt-4">
+                                                    <div className="flex items-center gap-2 border border-border rounded-md bg-background">
+                                                        <button
+                                                            onClick={() => updateQuantity(item.product.id, item.size, item.quantity - 1)}
+                                                            className="p-1.5 hover:bg-muted transition-colors rounded-l-md"
+                                                        >
+                                                            <Minus size={14} />
+                                                        </button>
+                                                        <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                                                        <button
+                                                            onClick={() => updateQuantity(item.product.id, item.size, item.quantity + 1)}
+                                                            className="p-1.5 hover:bg-muted transition-colors rounded-r-md"
+                                                        >
+                                                            <Plus size={14} />
+                                                        </button>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => removeItem(item.product.id, item.size)}
+                                                        className="text-muted-foreground hover:text-red-500 hover:bg-red-50 p-2 rounded-md transition-all"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="space-y-6 h-fit">
+                                    <div className="bg-card border border-border rounded-xl p-6 space-y-4 shadow-sm sticky top-24">
+                                        <h2 className="text-xl font-montserrat font-semibold">Order Summary</h2>
+                                        <div className="space-y-2 text-sm pt-4 border-t border-border">
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Subtotal</span>
+                                                <span>₹{total}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">Shipping</span>
+                                                <span className="text-green-600 font-medium">Free</span>
+                                            </div>
+                                        </div>
+                                        <div className="border-t border-border pt-4 flex justify-between font-bold text-lg">
+                                            <span>Total</span>
+                                            <span>₹{finalTotal}</span>
+                                        </div>
+                                        <button
+                                            onClick={handleProceedToCheckout}
+                                            className="w-full bg-accent text-accent-foreground py-3.5 rounded-full font-bold hover:opacity-90 transition-transform active:scale-95 shadow-lg shadow-accent/20"
+                                        >
+                                            Proceed to Checkout
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </FadeIn>
+                )}
+
+                {step === 'address' && (
+                    <FadeIn>
+                        <button onClick={() => setStep('cart')} className="flex items-center text-muted-foreground hover:text-foreground mb-6 transition-colors">
+                            <ArrowLeft size={16} className="mr-2" /> Back to Cart
+                        </button>
+                        <h1 className="text-3xl font-montserrat font-bold text-foreground mb-8">Shipping Address</h1>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="lg:col-span-2 space-y-6">
+                                {user?.addresses && user.addresses.length > 0 ? (
+                                    <div className="space-y-4">
+                                        {user.addresses.map((addr) => (
+                                            <div
+                                                key={addr.id}
+                                                onClick={() => setSelectedAddress(addr.id)}
+                                                className={`p-4 border rounded-xl cursor-pointer transition-all flex items-start gap-4 ${selectedAddress === addr.id
+                                                        ? 'border-accent bg-accent/5 ring-1 ring-accent'
+                                                        : 'border-border hover:border-accent/50 hover:bg-muted/30'
+                                                    }`}
+                                            >
+                                                <div className={`mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedAddress === addr.id ? 'border-accent' : 'border-muted-foreground'}`}>
+                                                    {selectedAddress === addr.id && <div className="w-2.5 h-2.5 rounded-full bg-accent" />}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-lg">{addr.fullName}</p>
+                                                    <p className="text-muted-foreground text-sm mt-1">{addr.addressLine1}, {addr.city}</p>
+                                                    <p className="text-muted-foreground text-sm">{addr.state} - {addr.pincode}</p>
+                                                    <p className="text-muted-foreground text-sm mt-2 flex items-center gap-1"><span className="text-xs font-semibold bg-muted px-2 py-0.5 rounded">Mobile</span> {addr.phone}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    !isAddingAddress && (
+                                        <div className="text-center py-10 border border-dashed border-border rounded-xl bg-muted/10">
+                                            <MapPin className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                                            <p className="text-muted-foreground">No addresses saved yet.</p>
+                                        </div>
+                                    )
+                                )}
+
+                                {isAddingAddress ? (
+                                    <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                        <h3 className="font-bold mb-4">Add New Address</h3>
+                                        <form onSubmit={handleSubmit(onSubmitAddress)} className="space-y-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-1">
+                                                    <input {...register('fullName', { required: true })} placeholder="Full Name" className="w-full p-3 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" />
+                                                    {errors.fullName && <span className="text-xs text-red-500">Required</span>}
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <input {...register('phone', { required: true })} placeholder="Phone Number" className="w-full p-3 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" />
+                                                    {errors.phone && <span className="text-xs text-red-500">Required</span>}
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <input {...register('addressLine1', { required: true })} placeholder="Address (House No, Building, Street, Area)" className="w-full p-3 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" />
+                                                {errors.addressLine1 && <span className="text-xs text-red-500">Required</span>}
+                                            </div>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                <input {...register('city', { required: true })} placeholder="City" className="w-full p-3 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" />
+                                                <input {...register('state', { required: true })} placeholder="State" className="w-full p-3 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" />
+                                                <input {...register('pincode', { required: true })} placeholder="Pincode" className="w-full p-3 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" />
+                                            </div>
+                                            <div className="flex gap-3 pt-2">
+                                                <button type="submit" className="flex-1 bg-primary text-primary-foreground py-2.5 rounded-lg font-medium hover:opacity-90">Save Address</button>
+                                                <button type="button" onClick={() => setIsAddingAddress(false)} className="flex-1 border border-border py-2.5 rounded-lg font-medium hover:bg-muted text-muted-foreground">Cancel</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => setIsAddingAddress(true)}
+                                        className="w-full border border-dashed border-border py-4 rounded-xl text-primary font-medium hover:border-accent hover:bg-accent/5 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Plus size={18} /> Add New Address
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="bg-card border border-border rounded-xl p-6 h-fit shadow-sm lg:col-span-1">
+                                <h2 className="text-xl font-montserrat font-semibold mb-4">Price Details</h2>
+                                <div className="space-y-3 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Total MRP</span>
+                                        <span>₹{total}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Discount on MRP</span>
+                                        <span className="text-green-600">-₹0</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Shipping Fee</span>
+                                        <span className="text-green-600">Free</span>
+                                    </div>
+                                </div>
+                                <div className="border-t border-border pt-4 mt-4 flex justify-between font-bold text-lg">
+                                    <span>Total Amount</span>
+                                    <span>₹{finalTotal}</span>
+                                </div>
+                                <button
+                                    onClick={handleAddressSelection}
+                                    disabled={!selectedAddress}
+                                    className="w-full bg-accent text-accent-foreground py-3.5 rounded-full font-bold mt-6 hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-accent/20"
+                                >
+                                    Continue to Payment
+                                </button>
+                            </div>
+                        </div>
+                    </FadeIn>
+                )}
+
+                {step === 'payment' && (
+                    <FadeIn>
+                        <button onClick={() => setStep('address')} className="flex items-center text-muted-foreground hover:text-foreground mb-6 transition-colors">
+                            <ArrowLeft size={16} className="mr-2" /> Back to Address
+                        </button>
+                        <h1 className="text-3xl font-montserrat font-bold text-foreground mb-8">Choose Payment Mode</h1>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="lg:col-span-2 space-y-4">
+                                <div
+                                    onClick={() => setPaymentMethod('cod')}
+                                    className={`p-6 border rounded-xl cursor-pointer flex items-center gap-4 transition-all ${paymentMethod === 'cod' ? 'border-accent bg-accent/5 ring-1 ring-accent' : 'border-border hover:bg-muted/30'}`}
+                                >
+                                    <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                        <Banknote size={24} />
+                                    </div>
+                                    <div className="flex-grow">
+                                        <h3 className="font-bold text-lg">Cash on Delivery</h3>
+                                        <p className="text-sm text-muted-foreground">Pay when your order arrives</p>
+                                    </div>
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'cod' ? 'border-accent' : 'border-muted-foreground'}`}>
+                                        {paymentMethod === 'cod' && <div className="w-3 h-3 rounded-full bg-accent" />}
+                                    </div>
+                                </div>
+
+                                <div
+                                    onClick={() => setPaymentMethod('upi')}
+                                    className={`p-6 border rounded-xl cursor-pointer flex items-center gap-4 transition-all opacity-75 hover:opacity-100 ${paymentMethod === 'upi' ? 'border-accent bg-accent/5 ring-1 ring-accent' : 'border-border hover:bg-muted/30'}`}
+                                >
+                                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                        <Landmark size={24} />
+                                    </div>
+                                    <div className="flex-grow">
+                                        <h3 className="font-bold text-lg">UPI (Google Pay / PhonePe)</h3>
+                                        <p className="text-sm text-muted-foreground">Instant payment using UPI App</p>
+                                    </div>
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'upi' ? 'border-accent' : 'border-muted-foreground'}`}>
+                                        {paymentMethod === 'upi' && <div className="w-3 h-3 rounded-full bg-accent" />}
+                                    </div>
+                                </div>
+
+                                <div
+                                    onClick={() => setPaymentMethod('card')}
+                                    className={`p-6 border rounded-xl cursor-pointer flex items-center gap-4 transition-all opacity-75 hover:opacity-100 ${paymentMethod === 'card' ? 'border-accent bg-accent/5 ring-1 ring-accent' : 'border-border hover:bg-muted/30'}`}
+                                >
+                                    <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+                                        <CreditCard size={24} />
+                                    </div>
+                                    <div className="flex-grow">
+                                        <h3 className="font-bold text-lg">Credit / Debit Card</h3>
+                                        <p className="text-sm text-muted-foreground">Secure payment via cards</p>
+                                    </div>
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'card' ? 'border-accent' : 'border-muted-foreground'}`}>
+                                        {paymentMethod === 'card' && <div className="w-3 h-3 rounded-full bg-accent" />}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-card border border-border rounded-xl p-6 h-fit shadow-lg shadow-primary/5 lg:col-span-1">
+                                <h2 className="text-xl font-montserrat font-semibold mb-4">Final Summary</h2>
+                                <div className="space-y-3 text-sm pb-4 border-b border-border">
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Items Total</span>
+                                        <span>₹{total}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Delivery</span>
+                                        <span className="text-green-600 font-medium">Free</span>
+                                    </div>
+                                </div>
+                                <div className="py-4 flex justify-between font-bold text-xl">
+                                    <span>To Pay</span>
+                                    <span>₹{finalTotal}</span>
+                                </div>
+                                <div className="bg-muted/30 p-3 rounded-lg text-xs text-muted-foreground mb-4">
+                                    By placing this order, you agree to our Terms of Service and Privacy Policy.
+                                </div>
+                                <button
+                                    onClick={handlePlaceOrder}
+                                    disabled={isProcessing}
+                                    className="w-full bg-accent text-accent-foreground py-4 rounded-full font-bold hover:opacity-90 transition-all disabled:opacity-70 disabled:cursor-wait shadow-lg shadow-accent/20 flex items-center justify-center gap-2"
+                                >
+                                    {isProcessing ? (
+                                        <>
+                                            <Loader2 size={20} className="animate-spin" /> Processing...
+                                        </>
+                                    ) : (
+                                        'Place Order'
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </FadeIn>
+                )}
+            </main>
+            <Footer />
+        </div>
     );
 }

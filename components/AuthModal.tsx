@@ -1,233 +1,160 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Phone, ArrowRight, Check } from 'lucide-react';
+import { useState } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
+import { X } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { sendOTP, verifyOTP, createUser, findUserByPhone } from '@/lib/auth';
-import Button from './Button';
-import Input from './Input';
-
-type Step = 'phone' | 'otp' | 'signup-info';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 
 export default function AuthModal() {
     const { showAuthModal, closeAuthModal, login } = useAuthStore();
-    const [step, setStep] = useState<Step>('phone');
-    const [mode, setMode] = useState<'login' | 'signup'>('login');
-    const [phone, setPhone] = useState('');
-    const [otp, setOtp] = useState('');
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [devOtp, setDevOtp] = useState('');
+    const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
 
-    const resetForm = () => {
-        setStep('phone');
-        setMode('login');
-        setPhone('');
-        setOtp('');
-        setName('');
-        setEmail('');
-        setError('');
-        setDevOtp('');
-    };
+    const { register: registerLogin, handleSubmit: handleSubmitLogin } = useForm();
+    const { register: registerRegister, handleSubmit: handleSubmitRegister } = useForm();
 
-    const handleClose = () => {
+    const onLoginSubmit = (data: any) => {
+        // Mock login
+        console.log('Login Data:', data);
+        login({
+            id: 'mock-user-1',
+            name: 'Demo User',
+            email: data.email,
+            phone: '9876543210',
+            addresses: []
+        });
+        toast.success('Logged in successfully!');
         closeAuthModal();
-        resetForm();
     };
 
-    const handleSendOTP = async () => {
-        if (phone.length < 10) {
-            setError('Please enter a valid 10-digit phone number');
-            return;
-        }
-        setLoading(true);
-        setError('');
-        const result = await sendOTP(phone);
-        setLoading(false);
-
-        if (result.success) {
-            // Extract dev OTP from message
-            const otpMatch = result.message.match(/Dev: (\d+)/);
-            if (otpMatch) setDevOtp(otpMatch[1]);
-
-            const existingUser = findUserByPhone(phone);
-            if (existingUser) {
-                setMode('login');
-            } else {
-                setMode('signup');
-            }
-            setStep('otp');
-        } else {
-            setError(result.message);
-        }
+    const onRegisterSubmit = (data: any) => {
+        // Mock register
+        console.log('Register Data:', data);
+        login({
+            id: 'mock-user-new',
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            addresses: [] // Address is optional/empty initially
+        });
+        toast.success('Registered successfully!');
+        closeAuthModal();
     };
-
-    const handleVerifyOTP = async () => {
-        setLoading(true);
-        setError('');
-        const result = await verifyOTP(phone, otp);
-        setLoading(false);
-
-        if (result.success) {
-            if (mode === 'login') {
-                const existingUser = findUserByPhone(phone);
-                if (existingUser) {
-                    login(existingUser);
-                    handleClose();
-                } else {
-                    setStep('signup-info');
-                }
-            } else {
-                setStep('signup-info');
-            }
-        } else {
-            setError(result.message);
-        }
-    };
-
-    const handleSignup = () => {
-        if (!name.trim()) {
-            setError('Please enter your name');
-            return;
-        }
-        if (!email.trim() || !email.includes('@')) {
-            setError('Please enter a valid email');
-            return;
-        }
-
-        const user = createUser({ name: name.trim(), email: email.trim(), phone });
-        login(user);
-        handleClose();
-    };
-
-    if (!showAuthModal) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <div
-                className="absolute inset-0 glass-overlay animate-fade-in"
-                onClick={handleClose}
-            />
-
-            {/* Modal */}
-            <div className="relative w-full max-w-md bg-offwhite/95 backdrop-blur-xl rounded-2xl shadow-2xl animate-scale-in overflow-hidden border border-white/20">
-                {/* Header */}
-                <div className="relative bg-black px-8 py-10 text-center">
-                    <button
-                        onClick={handleClose}
-                        className="absolute top-4 right-4 text-grey-400 hover:text-white transition-colors cursor-pointer"
-                        aria-label="Close"
-                    >
-                        <X size={24} />
-                    </button>
-                    <h2 className="font-heading text-2xl font-bold uppercase tracking-widest text-white mb-2">
-                        {step === 'signup-info' ? 'Almost There' : 'Welcome'}
-                    </h2>
-                    <p className="text-grey-400 text-sm font-body">
-                        {step === 'phone' && 'Enter your phone number to continue'}
-                        {step === 'otp' && `We sent a code to +91 ${phone}`}
-                        {step === 'signup-info' && 'Tell us a bit about yourself'}
-                    </p>
-                </div>
-
-                {/* Body */}
-                <div className="p-8 sm:p-10">
-                    {error && (
-                        <div className="mb-6 p-4 bg-red-50/50 border border-red-200 rounded-xl text-sm text-red-600 font-body flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" /> {error}
-                        </div>
-                    )}
-
-                    {/* Phone Step */}
-                    {step === 'phone' && (
-                        <div className="space-y-4">
-                            <Input
-                                label="Phone Number"
-                                type="tel"
-                                placeholder="Enter 10-digit number"
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                icon={<Phone size={16} />}
-                                maxLength={10}
-                            />
-                            <Button
-                                variant="accent"
-                                fullWidth
-                                size="lg"
-                                onClick={handleSendOTP}
-                                loading={loading}
-                            >
-                                Send OTP <ArrowRight size={16} className="ml-2" />
-                            </Button>
-                        </div>
-                    )}
-
-                    {/* OTP Step */}
-                    {step === 'otp' && (
-                        <div className="space-y-4">
-                            <Input
-                                label="Enter OTP"
-                                type="text"
-                                placeholder="6-digit code"
-                                value={otp}
-                                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                maxLength={6}
-                            />
-                            {devOtp && (
-                                <p className="text-xs text-grey-400 font-body text-center">
-                                    Dev OTP: <span className="font-bold text-terracotta">{devOtp}</span>
-                                </p>
-                            )}
-                            <Button
-                                variant="accent"
-                                fullWidth
-                                size="lg"
-                                onClick={handleVerifyOTP}
-                                loading={loading}
-                            >
-                                Verify <Check size={16} className="ml-2" />
-                            </Button>
-                            <button
-                                onClick={() => { setStep('phone'); setOtp(''); setError(''); }}
-                                className="w-full text-center text-sm text-grey-500 hover:text-black font-body transition-colors cursor-pointer"
-                            >
-                                Change phone number
+        <Dialog.Root open={showAuthModal} onOpenChange={(open) => !open && closeAuthModal()}>
+            <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-fade-in" />
+                <Dialog.Content className="fixed left-[50%] top-[50%] max-h-[85vh] w-[90vw] max-w-[425px] translate-x-[-50%] translate-y-[-50%] rounded-[6px] bg-background p-[25px] shadow-[hsl(206_22%_7%_/_35%)_0px_10px_38px_-10px,_hsl(206_22%_7%_/_20%)_0px_10px_20px_-15px] focus:outline-none z-50 animate-content-show">
+                    <div className="flex justify-between items-center mb-4">
+                        <Dialog.Title className="text-xl font-montserrat font-bold m-0 text-foreground">
+                            {activeTab === 'login' ? 'Welcome Back' : 'Join BihariThread'}
+                        </Dialog.Title>
+                        <Dialog.Close asChild>
+                            <button className="text-foreground hover:bg-muted p-1 rounded-full" aria-label="Close">
+                                <X size={20} />
                             </button>
-                        </div>
-                    )}
+                        </Dialog.Close>
+                    </div>
 
-                    {/* Signup Info Step */}
-                    {step === 'signup-info' && (
-                        <div className="space-y-4">
-                            <Input
-                                label="Full Name"
-                                type="text"
-                                placeholder="Your name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                            />
-                            <Input
-                                label="Email"
-                                type="email"
-                                placeholder="your@email.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
-                            <Button
-                                variant="accent"
-                                fullWidth
-                                size="lg"
-                                onClick={handleSignup}
+                    <div className="flex gap-4 mb-6 border-b border-border">
+                        <button
+                            className={`pb-2 text-sm font-medium transition-colors relative ${activeTab === 'login' ? 'text-accent' : 'text-muted-foreground'}`}
+                            onClick={() => setActiveTab('login')}
+                        >
+                            Login
+                            {activeTab === 'login' && (
+                                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-accent" />
+                            )}
+                        </button>
+                        <button
+                            className={`pb-2 text-sm font-medium transition-colors relative ${activeTab === 'register' ? 'text-accent' : 'text-muted-foreground'}`}
+                            onClick={() => setActiveTab('register')}
+                        >
+                            Register
+                            {activeTab === 'register' && (
+                                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-accent" />
+                            )}
+                        </button>
+                    </div>
+
+                    {activeTab === 'login' ? (
+                        <form onSubmit={handleSubmitLogin(onLoginSubmit)} className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Email</label>
+                                <input
+                                    {...registerLogin('email', { required: true })}
+                                    type="email"
+                                    placeholder="Enter your email"
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Password</label>
+                                <input
+                                    {...registerLogin('password', { required: true })}
+                                    type="password"
+                                    placeholder="Enter your password"
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 rounded-md font-medium text-sm transition-colors"
                             >
-                                Create Account <ArrowRight size={16} className="ml-2" />
-                            </Button>
-                        </div>
+                                Login
+                            </button>
+                        </form>
+                    ) : (
+                        <form onSubmit={handleSubmitRegister(onRegisterSubmit)} className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Full Name</label>
+                                <input
+                                    {...registerRegister('name', { required: true })}
+                                    placeholder="Your Name"
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Email</label>
+                                <input
+                                    {...registerRegister('email', { required: true })}
+                                    type="email"
+                                    placeholder="Your Email"
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Phone</label>
+                                <input
+                                    {...registerRegister('phone', { required: true })}
+                                    type="tel"
+                                    placeholder="Your Phone Number"
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Address (Optional)</label>
+                                <textarea
+                                    {...registerRegister('address')}
+                                    placeholder="You can add this later too"
+                                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 rounded-md font-medium text-sm transition-colors"
+                            >
+                                Register
+                            </button>
+                        </form>
                     )}
-                </div>
-            </div>
-        </div>
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
 }
+
+// Add these keyframes to your globals.css if not present, or use Tailwind animations
+// animate-content-show and animate-fade-in

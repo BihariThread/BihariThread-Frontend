@@ -1,380 +1,257 @@
-'use client';
+'use client'
 
-import React from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { ArrowRight, Paintbrush, Star, Truck, Shield } from 'lucide-react';
-import { motion } from 'framer-motion';
-import LayoutWrapper from '@/components/LayoutWrapper';
-import ProductCard from '@/components/ProductCard';
-import Button from '@/components/Button';
-import { getFeaturedProducts, getNewArrivals, products } from '@/lib/api';
+import Header from '@/components/Header'
+import CategoryStrip from '@/components/CategoryStrip'
+import ProductCard from '@/components/ProductCard'
+import Footer from '@/components/Footer'
+import { mockProducts, mockOffers } from '@/lib/mock-data'
+import { ArrowRight } from 'lucide-react'
+import Image from 'next/image'
+import { useState } from 'react'
+import FadeIn from '@/components/FadeIn'
+import { motion } from 'framer-motion'
+import Link from 'next/link'
 
-export default function HomePage() {
-  const featured = getFeaturedProducts();
-  const newArrivals = getNewArrivals();
+export default function Home() {
+  const [activeOffer, setActiveOffer] = useState(0)
+
+  const featuredProducts = mockProducts.filter((p) => p.featured)
+  const trendingProducts = mockProducts.filter((p) => p.category === 'trending').slice(0, 4)
 
   return (
-    <LayoutWrapper>
-      {/* ═══════ HERO SECTION ═══════ */}
-      <section className="relative min-h-screen flex items-center justify-center bg-black overflow-hidden perspective-1000">
+    <div className="min-h-screen bg-background overflow-x-hidden">
+      <Header />
+      <CategoryStrip />
+
+      {/* Hero Section */}
+      <section className="relative py-20 md:py-32 bg-primary overflow-hidden">
         {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-20 pointer-events-none">
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(circle at 25% 25%, #C65D3B 2px, transparent 2px), radial-gradient(circle at 75% 75%, #C65D3B 2px, transparent 2px)',
-            backgroundSize: '60px 60px'
-          }} />
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-accent blur-3xl"></div>
+          <div className="absolute top-1/2 -left-24 w-72 h-72 rounded-full bg-blue-500 blur-3xl"></div>
         </div>
 
-        {/* Ambient Glows */}
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-terracotta/20 blur-[120px] rounded-full animate-pulse pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-deep-maroon/20 blur-[100px] rounded-full pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-8 text-primary-foreground">
+              <FadeIn direction="right">
+                <h1 className="text-5xl md:text-6xl lg:text-7xl font-montserrat font-bold leading-tight tracking-tight">
+                  Rooted in <br />
+                  <span className="text-accent inline-block relative">
+                    Bihar.
+                    <svg className="absolute w-full h-3 -bottom-1 left-0 text-accent" viewBox="0 0 100 10" preserveAspectRatio="none">
+                      <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="3" fill="none" />
+                    </svg>
+                  </span>
+                </h1>
+              </FadeIn>
 
-        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          {/* Logo (Hidden here if Navbar one is used, but kept for design if preferred. 
-              User mentioned double logo, so we can hide this or keep it if Navbar one is hidden at top.
-              Our Navbar logic hides navbar logo at top, so KEEP this one.) 
-          */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8 }}
-            className="mb-8"
-          >
-            <Image
-              src="/logo.png"
-              alt="BihariThread"
-              width={320}
-              height={90}
-              className="mx-auto h-20 sm:h-24 md:h-32 w-auto brightness-0 invert drop-shadow-2xl"
-              priority
-            />
-          </motion.div>
+              <FadeIn direction="right" delay={0.2}>
+                <p className="text-xl md:text-2xl text-primary-foreground/80 max-w-lg leading-relaxed">
+                  Celebrate your cultural pride with premium fashion that tells a story.
+                </p>
+              </FadeIn>
 
-          {/* Tagline */}
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.8 }}
-            className="font-heading text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black uppercase tracking-wider text-white"
-          >
-            Rooted in <span className="text-terracotta text-glow">Bihar</span>.
-            <br />
-            Worn <span className="accent-underline">Everywhere</span>.
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
-            className="mt-8 text-grey-300 font-body text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed"
-          >
-            Premium streetwear crafted with soul. Every thread tells our story.
-          </motion.p>
-
-          {/* CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.8 }}
-            className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-6"
-          >
-            <Link href="/shop">
-              <Button variant="accent" size="lg" className="shadow-[0_0_20px_rgba(198,93,59,0.5)] hover:shadow-[0_0_30px_rgba(198,93,59,0.8)] transition-shadow">
-                Shop Now <ArrowRight size={18} className="ml-2" />
-              </Button>
-            </Link>
-            <Link href="/custom">
-              <Button variant="outline" size="lg" className="border-white/30 text-white hover:bg-white hover:text-black backdrop-blur-sm">
-                Custom Print
-              </Button>
-            </Link>
-          </motion.div>
-        </div>
-
-        {/* Scroll Indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.5, duration: 1 }}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce"
-        >
-          <div className="w-6 h-10 border-2 border-white/20 rounded-full flex justify-center pt-2 backdrop-blur-sm">
-            <div className="w-1 h-2 bg-terracotta rounded-full" />
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ═══════ FEATURED COLLECTION ═══════ */}
-      <section className="relative py-24 sm:py-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto z-10 bg-offwhite">
-        <div className="text-center mb-16">
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-terracotta font-heading text-sm font-bold uppercase tracking-[0.2em] mb-4"
-          >
-            Curated Selection
-          </motion.p>
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.1 }}
-            className="font-heading text-3xl sm:text-4xl md:text-5xl font-black uppercase tracking-wider text-black"
-          >
-            Featured Collection
-          </motion.h2>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
-          {featured.slice(0, 6).map((product, idx) => (
-            <motion.div
-              key={product.id}
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: idx * 0.1, duration: 0.6 }}
-            >
-              <ProductCard product={product} />
-            </motion.div>
-          ))}
-        </div>
-
-        <div className="text-center mt-16">
-          <Link href="/shop">
-            <Button variant="outline" size="lg" className="border-black text-black hover:bg-black hover:text-white">
-              View All Products <ArrowRight size={16} className="ml-2" />
-            </Button>
-          </Link>
-        </div>
-      </section>
-
-      {/* ═══════ BRAND STORY (Liquid Glass Effect) ═══════ */}
-      <section className="relative py-32 bg-black text-white overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 opacity-20" style={{
-            backgroundImage: 'linear-gradient(45deg, #1a1a1a 25%, transparent 25%, transparent 75%, #1a1a1a 75%), linear-gradient(45deg, #1a1a1a 25%, transparent 25%, transparent 75%, #1a1a1a 75%)',
-            backgroundPosition: '0 0, 10px 10px',
-            backgroundSize: '20px 20px'
-          }} />
-        </div>
-
-        {/* Abstract Liquid Shapes */}
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-terracotta/30 blur-[150px] rounded-full mix-blend-screen opacity-60 animate-pulse" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-deep-maroon/30 blur-[150px] rounded-full mix-blend-screen opacity-60" />
-
-        <div className="relative max-w-5xl mx-auto px-6 text-center z-10">
-          <div className="glass-panel-dark p-10 sm:p-16 rounded-3xl border border-white/10">
-            <motion.p
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              className="text-terracotta font-heading text-sm font-bold uppercase tracking-[0.2em] mb-6"
-            >
-              Our Story
-            </motion.p>
-            <motion.h2
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              className="font-heading text-4xl sm:text-5xl md:text-6xl font-black uppercase tracking-wider mb-8"
-            >
-              Born in <span className="text-terracotta text-glow">Bihar</span>.
-              <br />
-              Designed for the Streets.
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="font-body text-grey-300 text-lg sm:text-xl leading-relaxed max-w-3xl mx-auto"
-            >
-              BihariThread isn&apos;t just a brand — it&apos;s a movement. We take the raw, unfiltered pride
-              of Bihar and weave it into premium streetwear that speaks. Every piece is crafted with
-              heavyweight cotton, minimal design, and the soul of a culture that refuses to be
-              overlooked.
-            </motion.p>
-
-            <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-12 border-t border-white/10 pt-12">
-              {[
-                { val: '240+', label: 'GSM Cotton' },
-                { val: '100%', label: 'Premium Quality' },
-                { val: 'Bihar', label: 'Rooted' }
-              ].map((stat, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.2 + (i * 0.1) }}
-                >
-                  <p className="font-heading text-4xl sm:text-5xl font-black text-terracotta drop-shadow-lg">{stat.val}</p>
-                  <p className="font-body text-sm uppercase tracking-widest mt-2 text-grey-400">{stat.label}</p>
-                </motion.div>
-              ))}
+              <FadeIn direction="right" delay={0.4} className="flex flex-col sm:flex-row gap-4">
+                <Link href="/shop" className="px-8 py-4 bg-accent text-accent-foreground font-bold text-lg rounded-full hover:bg-accent/90 transition-all duration-300 flex items-center justify-center gap-2 group shadow-lg hover:shadow-accent/25 hover:-translate-y-1">
+                  Shop Collection
+                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform duration-200" />
+                </Link>
+                <button className="px-8 py-4 border-2 border-white/20 text-white font-bold text-lg rounded-full hover:bg-white/10 transition-all duration-300 hover:-translate-y-1">
+                  Our Story
+                </button>
+              </FadeIn>
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* ═══════ EDITORIAL — LARGE SPLIT ═══════ */}
-      <section className="py-0">
-        <div className="grid grid-cols-1 md:grid-cols-2 min-h-[700px]">
-          {/* Left — Large Product Image */}
-          <div className="relative h-[500px] md:h-auto img-zoom overflow-hidden">
-            <Image
-              src={products[0].images[0]}
-              alt={products[0].name}
-              fill
-              className="object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-            <div className="absolute bottom-12 left-12 max-w-md">
-              <span className="px-4 py-1.5 bg-terracotta text-white text-xs font-heading font-bold uppercase tracking-widest rounded-full shadow-lg">
-                Bestseller
-              </span>
-              <h3 className="mt-4 font-heading text-4xl sm:text-5xl font-black uppercase text-white shadow-black drop-shadow-md">
-                {products[0].name}
-              </h3>
-              <p className="text-white/90 font-body text-xl mt-2 font-medium">₹{products[0].price.toLocaleString()}</p>
-            </div>
-          </div>
-
-          {/* Right — Stacked Products */}
-          <div className="grid grid-cols-2 gap-px bg-grey-200">
-            {products.slice(1, 5).map((product) => (
-              <Link key={product.id} href={`/product/${product.id}`} className="group relative aspect-square bg-white overflow-hidden">
+            <FadeIn direction="left" delay={0.2} className="relative h-[500px] w-full hidden md:block">
+              <div className="absolute inset-0 bg-gradient-to-tr from-accent/20 to-transparent rounded-2xl transform rotate-3 scale-95 opacity-50 blur-sm"></div>
+              <div className="relative h-full w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10">
                 <Image
-                  src={product.images[0]}
-                  alt={product.name}
+                  src="/products/terracotta-classic.png"
+                  alt="Hero Image"
                   fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-110"
+                  className="object-cover hover:scale-105 transition-transform duration-700"
+                  priority
                 />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300" />
 
-                {/* Hover Content */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-4 group-hover:translate-y-0">
-                  <p className="font-heading text-sm font-bold uppercase text-white tracking-wider mb-2">{product.name}</p>
-                  <div className="h-0.5 w-12 bg-terracotta mb-2" />
-                  <p className="text-white font-body text-sm">₹{product.price.toLocaleString()}</p>
-                </div>
+                {/* Floating Card */}
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.8, duration: 0.8 }}
+                  className="absolute bottom-6 left-6 bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-xl text-white max-w-xs"
+                >
+                  <p className="font-semibold text-sm">New Arrival</p>
+                  <p className="text-xs opacity-80">Premium Madhubani Art T-Shirt</p>
+                </motion.div>
+              </div>
+            </FadeIn>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Products */}
+      <section className="py-24 bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-end justify-between mb-12">
+            <FadeIn>
+              <h2 className="text-4xl md:text-5xl font-montserrat font-bold text-foreground">
+                Featured <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">Drops</span>
+              </h2>
+            </FadeIn>
+            <FadeIn delay={0.1}>
+              <Link href="/shop" className="hidden md:flex items-center gap-2 text-primary font-semibold group hover:opacity-70 transition-opacity">
+                View All
+                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform duration-200" />
               </Link>
+            </FadeIn>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {featuredProducts.map((product, idx) => (
+              <ProductCard key={product.id} {...product} priority={idx < 2} />
             ))}
           </div>
         </div>
       </section>
 
-      {/* ═══════ NEW ARRIVALS ═══════ */}
-      {newArrivals.length > 0 && (
-        <section className="py-24 sm:py-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto bg-offwhite">
-          <div className="flex flex-col sm:flex-row items-end justify-between mb-12 gap-6">
-            <div>
-              <p className="text-terracotta font-heading text-sm font-bold uppercase tracking-[0.2em] mb-2">Just Dropped</p>
-              <h2 className="font-heading text-3xl sm:text-4xl md:text-5xl font-black uppercase tracking-wider text-black">
-                New Arrivals
-              </h2>
-            </div>
-            <Link href="/shop" className="group font-heading text-sm font-bold uppercase tracking-widest text-grey-600 hover:text-black transition-colors flex items-center gap-2">
-              See All <span className="group-hover:translate-x-1 transition-transform"><ArrowRight size={16} /></span>
+      {/* Offer Carousel */}
+      <section className="py-24 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeIn className="text-center mb-16">
+            <h2 className="text-4xl font-montserrat font-bold text-foreground mb-4">
+              Don't Miss Out
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+              Exclusive deals on our best-selling collections. Limited time offers.
+            </p>
+          </FadeIn>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {mockOffers.map((offer, index) => (
+              <FadeIn key={offer.id} delay={index * 0.1}>
+                <div
+                  className="group relative bg-background rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border border-border"
+                  onClick={() => setActiveOffer(index)}
+                >
+                  <div className="relative h-64 overflow-hidden">
+                    <Image
+                      src={offer.image}
+                      alt={offer.title}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute top-4 right-4 bg-white text-black px-4 py-1.5 rounded-full font-bold text-sm shadow-md">
+                      {Math.round(((offer.originalPrice - offer.price) / offer.originalPrice) * 100)}% OFF
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <h3 className="font-montserrat font-bold text-xl text-foreground mb-2 group-hover:text-accent transition-colors">
+                      {offer.title}
+                    </h3>
+                    <p className="text-muted-foreground mb-6 line-clamp-2">{offer.description}</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <span className="text-2xl font-bold text-primary">₹{offer.price}</span>
+                        <span className="text-sm text-muted-foreground line-through">₹{offer.originalPrice}</span>
+                      </div>
+                      <button className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center transform group-hover:scale-110 transition-all shadow-md">
+                        <ArrowRight size={18} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Trending Section */}
+      <section className="py-24 bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeIn className="mb-12 text-center">
+            <span className="text-accent font-semibold tracking-wider text-sm uppercase">Hot Right Now</span>
+            <h2 className="text-4xl md:text-5xl font-montserrat font-bold text-foreground mt-2">
+              Trending
+            </h2>
+          </FadeIn>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {trendingProducts.map((product) => (
+              <ProductCard key={product.id} {...product} />
+            ))}
+          </div>
+          <div className="mt-12 text-center">
+            <Link href="/shop" className="inline-flex items-center gap-2 px-8 py-3 rounded-full border border-border hover:bg-primary hover:text-white transition-all duration-300 font-medium">
+              View All Products
+              <ArrowRight size={18} />
             </Link>
           </div>
+        </div>
+      </section>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {newArrivals.map((product, idx) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.1 }}
-              >
-                <ProductCard product={product} layout="tall" />
-              </motion.div>
+      {/* Brand Statement */}
+      <section className="py-24 bg-primary text-primary-foreground relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-0 left-0 w-full h-full opacity-10">
+          <div className="absolute top-10 left-10 w-32 h-32 rounded-full border-4 border-white"></div>
+          <div className="absolute bottom-10 right-10 w-64 h-64 rounded-full border-2 border-white"></div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+          <FadeIn>
+            <h2 className="text-3xl md:text-5xl font-montserrat font-bold mb-16">
+              Why Choose BihariThread?
+            </h2>
+          </FadeIn>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            {[
+              { title: 'Premium Quality', desc: '100% Cotton, Bio-washed & Pre-shrunk fabric for lasting comfort.', icon: '✨' },
+              { title: 'Cultural Pride', desc: 'Designs that celebrate the rich heritage and art of Bihar.', icon: '🎨' },
+              { title: 'Fast Shipping', desc: 'Express delivery across India within 3-5 business days.', icon: '🚚' },
+            ].map((item, idx) => (
+              <FadeIn key={item.title} delay={idx * 0.2} className="space-y-4">
+                <div className="text-6xl mb-6">{item.icon}</div>
+                <h3 className="text-2xl font-montserrat font-bold">{item.title}</h3>
+                <p className="text-primary-foreground/70 text-lg leading-relaxed">{item.desc}</p>
+              </FadeIn>
             ))}
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
-      {/* ═══════ TRUST SIGNALS ═══════ */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            { icon: Truck, title: 'Free Shipping', desc: 'On orders above ₹999' },
-            { icon: Shield, title: 'Premium Quality', desc: '240 GSM, bio-washed' },
-            { icon: Star, title: 'Easy Returns', desc: '7-day return policy' },
-            { icon: Paintbrush, title: 'Custom Prints', desc: 'Your design, our craft' },
-          ].map((item, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="text-center p-8 rounded-2xl bg-white border border-grey-200 hover:border-terracotta/30 hover:shadow-xl transition-all duration-300 group"
-            >
-              <div className="w-16 h-16 bg-offwhite rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-terracotta/10 transition-colors">
-                <item.icon size={28} className="text-black group-hover:text-terracotta transition-colors" />
+      {/* Newsletter Section */}
+      <section className="py-24 bg-background">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-muted/30 rounded-3xl p-8 md:p-16 text-center border border-border relative overflow-hidden">
+            <div className="absolute -top-24 -left-24 w-64 h-64 bg-accent/10 rounded-full blur-3xl"></div>
+            <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+
+            <FadeIn className="relative z-10">
+              <h2 className="text-3xl md:text-4xl font-montserrat font-bold text-foreground mb-4">
+                Join the Community
+              </h2>
+              <p className="text-muted-foreground mb-8 text-lg max-w-lg mx-auto">
+                Subscribe to get exclusive deals, early access to new drops, and stories from Bihar.
+              </p>
+              <div className="flex gap-4 flex-col sm:flex-row max-w-md mx-auto">
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="flex-1 px-6 py-4 rounded-full text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 bg-background shadow-sm"
+                />
+                <button className="px-8 py-4 bg-primary text-primary-foreground font-bold rounded-full hover:opacity-90 transition-opacity duration-200 shadow-lg">
+                  Subscribe
+                </button>
               </div>
-              <h3 className="font-heading text-sm font-bold uppercase tracking-widest text-black mb-2">{item.title}</h3>
-              <p className="text-grey-500 text-sm font-body">{item.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══════ CUSTOM PRINT CTA ═══════ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 mb-0">
-        <div className="max-w-6xl mx-auto rounded-[3rem] p-8 sm:p-20 text-center relative overflow-hidden shadow-2xl">
-          {/* Background Image/Gradient */}
-          <div className="absolute inset-0 bg-black">
-            <div className="absolute inset-0 opacity-40 bg-[url('/custom-bg-pattern.png')] bg-repeat opacity-10" />
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-terracotta/40 blur-[150px] rounded-full" />
-            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-deep-maroon/40 blur-[150px] rounded-full" />
-          </div>
-
-          <div className="relative z-10">
-            <motion.div
-              initial={{ scale: 0 }}
-              whileInView={{ scale: 1 }}
-              viewport={{ once: true }}
-              className="w-20 h-20 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-8 border border-white/20"
-            >
-              <Paintbrush size={32} className="text-white" />
-            </motion.div>
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="font-heading text-3xl sm:text-5xl md:text-6xl font-black uppercase tracking-wider text-white mb-6"
-            >
-              Want Your Own <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-terracotta to-orange-500">Design Printed?</span>
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="font-body text-grey-300 text-lg sm:text-xl max-w-2xl mx-auto mb-10"
-            >
-              Upload your artwork, choose your size and quantity, and we&apos;ll bring your vision to life on premium cotton.
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
-            >
-              <Link href="/custom">
-                <Button variant="accent" size="lg" className="h-16 px-10 text-lg shadow-[0_0_30px_rgba(198,93,59,0.4)] hover:shadow-[0_0_50px_rgba(198,93,59,0.6)]">
-                  Start Custom Order <ArrowRight size={20} className="ml-3" />
-                </Button>
-              </Link>
-            </motion.div>
+              <p className="text-xs text-muted-foreground mt-6">
+                We respect your privacy. No spam, ever.
+              </p>
+            </FadeIn>
           </div>
         </div>
       </section>
-    </LayoutWrapper>
-  );
+
+      <Footer />
+    </div>
+  )
 }

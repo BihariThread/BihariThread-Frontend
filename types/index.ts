@@ -4,8 +4,9 @@ export interface Product {
   price: number;
   originalPrice?: number;
   description: string;
+  image: string;
   fabric: string;
-  category: 'oversized' | 'classic' | 'graphic' | 'limited';
+  category: 'oversized' | 'classic' | 'graphic' | 'limited' | 'funky' | 'minimal' | 'ipl' | 'trending';
   images: string[];
   sizes: string[];
   colors: string[];
