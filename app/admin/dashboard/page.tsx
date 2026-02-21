@@ -1,13 +1,15 @@
 'use client'
 
-import { mockOrders, mockEnquiries, mockProducts, mockUsers } from '@/lib/mock-data'
+import { useSiteStore } from '@/store/siteStore'
 import { TrendingUp, ShoppingCart, AlertCircle, Users as UsersIcon, ArrowUpRight, ArrowDownRight, Package } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AdminDashboard() {
-  const totalRevenue = mockOrders.reduce((sum, order) => sum + order.total, 0)
-  const pendingOrders = mockOrders.filter((o) => o.status === 'processing').length
-  const pendingEnquiries = mockEnquiries.filter((e) => e.status === 'pending').length
+  const { products, orders, users, enquiries } = useSiteStore()
+
+  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0)
+  const pendingOrders = orders.filter((o) => o.status === 'pending' || o.status === 'processing').length
+  const pendingEnquiries = enquiries.filter((e) => e.status === 'pending').length
 
   const stats = [
     {
@@ -20,7 +22,7 @@ export default function AdminDashboard() {
     },
     {
       label: 'Total Orders',
-      value: mockOrders.length,
+      value: orders.length,
       change: '+5.2%',
       trend: 'up',
       icon: ShoppingCart,
@@ -28,7 +30,7 @@ export default function AdminDashboard() {
     },
     {
       label: 'Active Users',
-      value: mockUsers.length,
+      value: users.length,
       change: '-2.1%',
       trend: 'down',
       icon: UsersIcon,
@@ -36,7 +38,7 @@ export default function AdminDashboard() {
     },
     {
       label: 'Products',
-      value: mockProducts.length,
+      value: products.length,
       change: '0%',
       trend: 'neutral',
       icon: Package,
@@ -106,10 +108,10 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {mockOrders.slice(0, 5).map((order) => (
+                {orders.slice(0, 5).map((order) => (
                   <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors duration-200">
                     <td className="py-3 px-4 font-medium">{order.id}</td>
-                    <td className="py-3 px-4">{order.customerName}</td>
+                    <td className="py-3 px-4">{(order as any).customerName || 'Anonymous'}</td>
                     <td className="py-3 px-4 text-right font-medium">₹{order.total}</td>
                     <td className="py-3 px-4 text-center">
                       <span
@@ -137,7 +139,7 @@ export default function AdminDashboard() {
             <Link href="/admin/enquiries" className="text-sm text-accent hover:underline">View All</Link>
           </div>
           <div className="flex-1 space-y-4">
-            {mockEnquiries.slice(0, 4).map((enquiry) => (
+            {enquiries.slice(0, 4).map((enquiry) => (
               <div key={enquiry.id} className="flex items-start gap-4 p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors">
                 <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
                   <span className="font-bold text-xs">{enquiry.businessName.charAt(0)}</span>

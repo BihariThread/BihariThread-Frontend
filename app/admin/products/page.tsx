@@ -1,24 +1,30 @@
-'use client'
-
 import { useState } from 'react'
-import { mockProducts } from '@/lib/mock-data'
+import { useSiteStore } from '@/store/siteStore'
 import { Trash2, Edit2, Plus, Search, X, Check, Upload, Filter } from 'lucide-react'
 import * as Dialog from '@radix-ui/react-dialog'
 import Image from 'next/image'
 import { Product } from '@/types'
+import { toast } from 'sonner'
 
 export default function AdminProducts() {
-  const [products, setProducts] = useState(mockProducts)
+  const { products, addProduct, updateProduct, deleteProduct, categories } = useSiteStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     price: '',
+    originalPrice: '',
     category: '',
     image: '',
+    images: '',
     description: '',
-    inStock: true
+    fabric: '100% Cotton',
+    sizes: 'XS, S, M, L, XL, XXL',
+    colors: 'Black, White, Navy',
+    inStock: true,
+    featured: false,
+    new: false
   })
 
   // Filter products
@@ -29,64 +35,74 @@ export default function AdminProducts() {
 
   const handleDelete = (id: string) => {
     if (confirm('Are you sure you want to delete this product?')) {
-      setProducts((prev) => prev.filter((p) => p.id !== id))
+      deleteProduct(id)
     }
   }
 
-  const handleEdit = (product: any) => {
+  const handleEdit = (product: Product) => {
     setEditingId(product.id)
     setFormData({
       name: product.name,
       price: product.price.toString(),
+      originalPrice: (product.originalPrice || '').toString(),
       category: product.category,
       image: product.image,
+      images: product.images.join(', '),
       description: product.description || '',
-      inStock: true // Mock default
+      fabric: product.fabric || '100% Cotton',
+      sizes: product.sizes.join(', '),
+      colors: product.colors.join(', '),
+      inStock: product.inStock,
+      featured: product.featured,
+      new: product.new
     })
     setIsDialogOpen(true)
   }
 
   const handleAddNew = () => {
     setEditingId(null)
-    setFormData({ name: '', price: '', category: '', image: '', description: '', inStock: true })
+    setFormData({
+      name: '',
+      price: '',
+      originalPrice: '',
+      category: '',
+      image: '',
+      images: '',
+      description: '',
+      fabric: '100% Cotton',
+      sizes: 'XS, S, M, L, XL, XXL',
+      colors: 'Black, White, Navy',
+      inStock: true,
+      featured: false,
+      new: true
+    })
     setIsDialogOpen(true)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    const productData: Product = {
+      id: editingId || Math.random().toString(36).substr(2, 9),
+      name: formData.name,
+      price: Number(formData.price),
+      originalPrice: Number(formData.originalPrice) || undefined,
+      category: formData.category as Product['category'],
+      image: formData.image || '/placeholder.png',
+      images: formData.images.split(',').map((s: string) => s.trim()).filter(Boolean),
+      description: formData.description,
+      fabric: formData.fabric,
+      sizes: formData.sizes.split(',').map((s: string) => s.trim()).filter(Boolean),
+      colors: formData.colors.split(',').map((s: string) => s.trim()).filter(Boolean),
+      inStock: formData.inStock,
+      featured: formData.featured,
+      new: formData.new
+    }
+
     if (editingId) {
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === editingId
-            ? {
-              ...p,
-              name: formData.name,
-              price: Number(formData.price),
-              category: formData.category as Product['category'],
-              image: formData.image || p.image, // Keep existing if empty
-              description: formData.description
-            }
-            : p
-        )
-      )
+      updateProduct(productData)
     } else {
-      // Add new
-      const newProduct = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: formData.name,
-        price: Number(formData.price),
-        category: formData.category,
-        image: formData.image || '/placeholder.png',
-        images: [formData.image || '/placeholder.png'],
-        description: formData.description,
-        featured: false,
-        sizes: ['S', 'M', 'L', 'XL'],
-        colors: ['Black', 'Navy'],
-        fabric: 'Cotton',
-        inStock: true,
-        new: true
-      }
-      setProducts([newProduct as any, ...products])
+      addProduct(productData)
     }
     setIsDialogOpen(false)
   }
@@ -239,6 +255,19 @@ export default function AdminProducts() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <label className="text-sm font-medium">Original Price (₹)</label>
+                  <input
+                    type="number"
+                    value={formData.originalPrice}
+                    onChange={(e) => setFormData({ ...formData, originalPrice: e.target.value })}
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <label className="text-sm font-medium">Category</label>
                   <select
                     value={formData.category}
@@ -247,14 +276,43 @@ export default function AdminProducts() {
                     className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                   >
                     <option value="">Select Category</option>
-                    <option value="trending">Trending</option>
-                    <option value="ipl">IPL</option>
-                    <option value="csk">CSK (Wait, csk is not in Product type union? Check types.ts)</option>
-                    <option value="funky">Funky</option>
-                    <option value="classic">Classic</option>
-                    <option value="minimal">Minimal</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.slug}>{cat.name}</option>
+                    ))}
                   </select>
                 </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Fabric</label>
+                  <input
+                    type="text"
+                    value={formData.fabric}
+                    onChange={(e) => setFormData({ ...formData, fabric: e.target.value })}
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                    placeholder="e.g. 100% Cotton"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Sizes (comma separated)</label>
+                <input
+                  type="text"
+                  value={formData.sizes}
+                  onChange={(e) => setFormData({ ...formData, sizes: e.target.value })}
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                  placeholder="XS, S, M, L, XL, XXL"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Colors (comma separated)</label>
+                <input
+                  type="text"
+                  value={formData.colors}
+                  onChange={(e) => setFormData({ ...formData, colors: e.target.value })}
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                  placeholder="Black, White, Navy"
+                />
               </div>
 
               <div className="space-y-2">
@@ -269,12 +327,13 @@ export default function AdminProducts() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Product Image URL</label>
+                <label className="text-sm font-medium">Main Image URL</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={formData.image}
                     onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    required
                     className="flex-1 px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                     placeholder="/products/image.png"
                   />
@@ -282,6 +341,47 @@ export default function AdminProducts() {
                     <Upload size={18} />
                   </button>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Additional Image URLs (comma separated)</label>
+                <input
+                  type="text"
+                  value={formData.images}
+                  onChange={(e) => setFormData({ ...formData, images: e.target.value })}
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                  placeholder="url1, url2, url3"
+                />
+              </div>
+
+              <div className="flex gap-6 py-2">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={formData.inStock}
+                    onChange={(e) => setFormData({ ...formData, inStock: e.target.checked })}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+                  />
+                  <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">In Stock</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={formData.featured}
+                    onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+                  />
+                  <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Featured</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={formData.new}
+                    onChange={(e) => setFormData({ ...formData, new: e.target.checked })}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+                  />
+                  <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">New Release</span>
+                </label>
               </div>
 
               <div className="pt-4 flex justify-end gap-3">

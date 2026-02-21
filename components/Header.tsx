@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Menu, X, ShoppingCart, User, Heart } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useWishlistStore } from '@/store/wishlistStore'
@@ -44,8 +45,14 @@ export default function Header() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="flex-shrink-0">
-              <div className="text-2xl font-montserrat font-bold text-primary">
-                BIHAR<span className="text-accent">THREAD</span>
+              <div className="relative h-30 md:h-40 w-40 md:w-50 overflow-hidden">
+                <Image
+                  src="/logo.png"
+                  alt="BIHARI THREAD"
+                  fill
+                  className="object-contain"
+                  priority
+                />
               </div>
             </Link>
 

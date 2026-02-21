@@ -4,7 +4,7 @@ import Header from '@/components/Header'
 import CategoryStrip from '@/components/CategoryStrip'
 import ProductCard from '@/components/ProductCard'
 import Footer from '@/components/Footer'
-import { mockProducts, mockOffers } from '@/lib/mock-data'
+import { useSiteStore } from '@/store/siteStore'
 import { ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import { useState } from 'react'
@@ -13,15 +13,15 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 
 export default function Home() {
+  const { products, offers, siteSettings } = useSiteStore()
   const [activeOffer, setActiveOffer] = useState(0)
 
-  const featuredProducts = mockProducts.filter((p) => p.featured)
-  const trendingProducts = mockProducts.filter((p) => p.category === 'trending').slice(0, 4)
+  const featuredProducts = products.filter((p) => p.featured)
+  const trendingProducts = products.filter((p) => p.category === 'trending').slice(0, 4)
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       <Header />
-      <CategoryStrip />
 
       {/* Hero Section */}
       <section className="relative py-20 md:py-32 bg-primary overflow-hidden">
@@ -36,9 +36,9 @@ export default function Home() {
             <div className="space-y-8 text-primary-foreground">
               <FadeIn direction="right">
                 <h1 className="text-5xl md:text-6xl lg:text-7xl font-montserrat font-bold leading-tight tracking-tight">
-                  Rooted in <br />
+                  {siteSettings.heroTitle.split(',')[0]} <br />
                   <span className="text-accent inline-block relative">
-                    Bihar.
+                    {siteSettings.heroTitle.split(',')[1] || 'Bihar.'}
                     <svg className="absolute w-full h-3 -bottom-1 left-0 text-accent" viewBox="0 0 100 10" preserveAspectRatio="none">
                       <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="3" fill="none" />
                     </svg>
@@ -48,7 +48,7 @@ export default function Home() {
 
               <FadeIn direction="right" delay={0.2}>
                 <p className="text-xl md:text-2xl text-primary-foreground/80 max-w-lg leading-relaxed">
-                  Celebrate your cultural pride with premium fashion that tells a story.
+                  {siteSettings.heroSubtitle}
                 </p>
               </FadeIn>
 
@@ -127,7 +127,7 @@ export default function Home() {
           </FadeIn>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {mockOffers.map((offer, index) => (
+            {offers.map((offer, index) => (
               <FadeIn key={offer.id} delay={index * 0.1}>
                 <div
                   className="group relative bg-background rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border border-border"

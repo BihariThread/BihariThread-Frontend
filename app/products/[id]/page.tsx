@@ -6,7 +6,7 @@ import { ShoppingCart, Heart, Share2, Check } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
-import { mockProducts } from '@/lib/mock-data';
+import { useSiteStore } from '@/store/siteStore';
 import { useCartStore } from '@/store/cartStore';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { useAuthStore } from '@/store/authStore';
@@ -15,6 +15,7 @@ import { Product } from '@/types';
 
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { products } = useSiteStore();
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [activeImage, setActiveImage] = useState(0);
 
@@ -22,8 +23,8 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore();
   const { isLoggedIn, openAuthModal } = useAuthStore();
 
-  // Find product from mock data
-  const productData = mockProducts.find((p) => p.id === id);
+  // Find product from store
+  const productData = products.find((p) => p.id === id);
 
   // Safety check - if product not found
   if (!productData) {
@@ -54,7 +55,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const isFavorited = isInWishlist(product.id);
 
   // Filter recommended products (same category, exclude current)
-  const recommendedProducts = mockProducts
+  const recommendedProducts = products
     .filter((p: Product) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 

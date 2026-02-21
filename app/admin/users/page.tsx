@@ -1,23 +1,27 @@
-'use client'
-
 import { useState } from 'react'
-import { mockUsers, mockOrders } from '@/lib/mock-data'
+import { useSiteStore } from '@/store/siteStore'
 import { Mail, ShoppingBag, Search, Phone, MapPin, Calendar } from 'lucide-react'
 
 export default function AdminUsers() {
+  const { users, orders } = useSiteStore()
   const [searchQuery, setSearchQuery] = useState('')
 
   const getUserOrders = (userId: string) => {
-    return mockOrders.filter((order) => {
-      const user = mockUsers.find((u) => u.id === userId)
-      return user && order.customerName === user.name
+    return orders.filter((order) => {
+      const user = users.find((u) => u.id === userId)
+      return user && (order as any).customerName === user.name
     })
   }
 
-  const filteredUsers = mockUsers.filter(user =>
+  const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  const formatDate = (date: any) => {
+    const d = new Date(date)
+    return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString()
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -26,7 +30,7 @@ export default function AdminUsers() {
           <h1 className="text-3xl font-montserrat font-bold text-foreground">
             Users
           </h1>
-          <p className="text-muted-foreground mt-1">Manage registered users ({mockUsers.length})</p>
+          <p className="text-muted-foreground mt-1">Manage registered users ({users.length})</p>
         </div>
         <div className="relative w-full md:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
@@ -78,7 +82,7 @@ export default function AdminUsers() {
                 </p>
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                   <Calendar size={14} />
-                  Joined {user.createdAt.toLocaleDateString()}
+                  Joined {formatDate(user.createdAt)}
                 </p>
               </div>
 

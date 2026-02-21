@@ -1,19 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { mockEnquiries } from '@/lib/mock-data'
+import { useSiteStore } from '@/store/siteStore'
 import { Mail, Phone } from 'lucide-react'
 
 export default function AdminEnquiries() {
-  const [enquiries, setEnquiries] = useState(mockEnquiries)
+  const { enquiries, updateEnquiryStatus } = useSiteStore()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [quoteAmount, setQuoteAmount] = useState('')
-
-  const updateEnquiryStatus = (id: string, newStatus: string) => {
-    setEnquiries((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, status: newStatus } : e))
-    )
-  }
 
   const selectedEnquiry = enquiries.find((e) => e.id === selectedId)
 
@@ -57,11 +51,10 @@ export default function AdminEnquiries() {
                   <tr
                     key={enquiry.id}
                     onClick={() => setSelectedId(enquiry.id)}
-                    className={`border-b border-border transition-colors duration-200 cursor-pointer ${
-                      selectedId === enquiry.id
+                    className={`border-b border-border transition-colors duration-200 cursor-pointer ${selectedId === enquiry.id
                         ? 'bg-accent/10'
                         : 'hover:bg-muted/50'
-                    }`}
+                      }`}
                   >
                     <td className="py-4 px-6 text-foreground font-medium">{enquiry.id}</td>
                     <td className="py-4 px-6 text-foreground">{enquiry.businessName}</td>

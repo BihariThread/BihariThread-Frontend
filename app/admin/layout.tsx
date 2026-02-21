@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -22,21 +22,43 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { logout } = useAuthStore()
+  const [isMounting, setIsMounting] = useState(true)
+  const { isAdminLoggedIn, adminLogout } = useAuthStore()
+
+  useEffect(() => {
+    setIsMounting(false)
+    if (!isAdminLoggedIn && pathname !== '/admin') {
+      router.push('/admin')
+    }
+  }, [isAdminLoggedIn, pathname, router])
 
   const adminLinks = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/admin/dashboard' },
     { icon: Package, label: 'Products', href: '/admin/products' },
+    { icon: Settings, label: 'Categories', href: '/admin/categories' },
     { icon: ShoppingBag, label: 'Orders', href: '/admin/orders' },
     { icon: MessageSquare, label: 'Enquiries', href: '/admin/enquiries' },
     { icon: Users, label: 'Users', href: '/admin/users' },
+    { icon: Settings, label: 'Site Settings', href: '/admin/settings' },
   ]
 
   const isActive = (href: string) => pathname === href
 
   const handleLogout = () => {
-    logout()
-    router.push('/')
+    adminLogout()
+    router.push('/admin')
+  }
+
+  if (isMounting) return null;
+
+  // If not logged in and not on login page, don't show layout content
+  if (!isAdminLoggedIn && pathname !== '/admin') {
+    return null
+  }
+
+  // If on login page, don't show the sidebar layout
+  if (pathname === '/admin') {
+    return <>{children}</>
   }
 
   return (
@@ -57,7 +79,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         <div className="flex flex-col h-full">
           <div className="p-6 border-b border-border flex items-center justify-between">
             <Link href="/admin/dashboard" className="text-2xl font-montserrat font-bold text-primary">
-              BIHAR<span className="text-accent">ADMIN</span>
+              BIHARITHREAD<span className="text-accent">ADMIN</span>
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}
@@ -77,8 +99,8 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                   href={link.href}
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group ${active
-                      ? 'bg-primary text-primary-foreground font-medium shadow-md'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? 'bg-primary text-primary-foreground font-medium shadow-md'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     }`}
                 >
                   <Icon size={20} className={active ? '' : 'group-hover:text-accent transition-colors'} />

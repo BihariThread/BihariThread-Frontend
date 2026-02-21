@@ -7,9 +7,12 @@ import { User, Address } from '@/types';
 interface AuthStore {
     user: User | null;
     isLoggedIn: boolean;
+    isAdminLoggedIn: boolean;
     showAuthModal: boolean;
     login: (user: User) => void;
     logout: () => void;
+    adminLogin: (email: string, pass: string) => boolean;
+    adminLogout: () => void;
     openAuthModal: () => void;
     closeAuthModal: () => void;
     updateUser: (data: Partial<User>) => void;
@@ -23,11 +26,22 @@ export const useAuthStore = create<AuthStore>()(
         (set, get) => ({
             user: null,
             isLoggedIn: false,
+            isAdminLoggedIn: false,
             showAuthModal: false,
 
             login: (user) => set({ user, isLoggedIn: true, showAuthModal: false }),
 
             logout: () => set({ user: null, isLoggedIn: false }),
+
+            adminLogin: (email, pass) => {
+                if (email === 'biharithread@gmail.com' && pass === 'bihariThread@admin') {
+                    set({ isAdminLoggedIn: true });
+                    return true;
+                }
+                return false;
+            },
+
+            adminLogout: () => set({ isAdminLoggedIn: false }),
 
             openAuthModal: () => set({ showAuthModal: true }),
 
@@ -85,6 +99,7 @@ export const useAuthStore = create<AuthStore>()(
             partialize: (state) => ({
                 user: state.user,
                 isLoggedIn: state.isLoggedIn,
+                isAdminLoggedIn: state.isAdminLoggedIn,
             }),
         }
     )

@@ -4,18 +4,19 @@ import { useState } from 'react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import ProductCard from '@/components/ProductCard'
-import { mockProducts } from '@/lib/mock-data'
+import { useSiteStore } from '@/store/siteStore'
 import { ChevronDown, Sliders } from 'lucide-react'
 
 export default function Shop() {
+  const { products, categories: storeCategories } = useSiteStore()
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [priceRange, setPriceRange] = useState([0, 1000])
   const [showFilters, setShowFilters] = useState(false)
   const [sortBy, setSortBy] = useState('featured')
 
-  const categories = ['All', 'Trending', 'IPL', 'CSK', 'Funky', 'Classic', 'Minimal']
+  const categories = ['All', ...storeCategories.map(c => c.name)]
 
-  const filteredProducts = mockProducts.filter((product) => {
+  const filteredProducts = products.filter((product) => {
     const categoryMatch =
       selectedCategory === 'all' ||
       product.category.toLowerCase() === selectedCategory.toLowerCase()
@@ -33,7 +34,7 @@ export default function Shop() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       {/* Page Header */}
       <div className="bg-muted py-8 md:py-12 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

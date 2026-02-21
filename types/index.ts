@@ -41,6 +41,7 @@ export interface User {
   email: string;
   phone: string;
   addresses: Address[];
+  createdAt: string;
 }
 
 export interface Order {
@@ -62,4 +63,41 @@ export interface CustomOrder {
   status: 'pending' | 'quoted' | 'approved' | 'in-production' | 'completed';
   createdAt: string;
   quotedPrice?: number;
+}
+export interface Offer {
+  id: string;
+  title: string;
+  price: number;
+  originalPrice: number;
+  image: string;
+  description: string;
+}
+
+export interface Enquiry {
+  id: string;
+  businessName: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  quantity: number;
+  status: 'pending' | 'quoted' | 'contacted' | 'closed';
+  createdAt: string;
+  message: string;
+}
+
+export interface SiteSettings {
+  heroTitle: string;
+  heroSubtitle: string;
+  heroButtonText: string;
+  shopBannerTitle: string;
+  shopBannerSubtitle: string;
+  contactEmail: string;
+  contactPhone: string;
+  address: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
 }

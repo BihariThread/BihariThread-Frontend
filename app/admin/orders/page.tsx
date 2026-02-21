@@ -1,25 +1,22 @@
-'use client'
-
 import { useState } from 'react'
-import { mockOrders } from '@/lib/mock-data'
+import { useSiteStore } from '@/store/siteStore'
 import { ChevronDown, Search, Filter, Eye, MoreHorizontal } from 'lucide-react'
 
 export default function AdminOrders() {
-  const [orders, setOrders] = useState(mockOrders)
+  const { orders, updateOrderStatus } = useSiteStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customerName.toLowerCase().includes(searchQuery.toLowerCase());
+      (order as any).customerName?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const updateOrderStatus = (id: string, newStatus: string) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o))
-    )
+  const formatDate = (date: any) => {
+    const d = new Date(date)
+    return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString()
   }
 
   const getStatusColor = (status: string) => {
@@ -97,18 +94,18 @@ export default function AdminOrders() {
                   <td className="py-4 px-6 font-medium text-foreground">#{order.id}</td>
                   <td className="py-4 px-6 text-foreground">
                     <div className="flex flex-col">
-                      <span className="font-medium">{order.customerName}</span>
-                      <span className="text-xs text-muted-foreground">2 items</span>
+                      <span className="font-medium">{(order as any).customerName || 'Anonymous'}</span>
+                      <span className="text-xs text-muted-foreground">{order.items.length} items</span>
                     </div>
                   </td>
                   <td className="py-4 px-6 text-muted-foreground">
-                    {order.createdAt.toLocaleDateString()}
+                    {formatDate(order.createdAt)}
                   </td>
                   <td className="py-4 px-6 text-foreground font-semibold">₹{order.total}</td>
                   <td className="py-4 px-6 text-center">
                     <select
                       value={order.status}
-                      onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                      onChange={(e) => updateOrderStatus(order.id, e.target.value as any)}
                       className={`px-3 py-1 rounded-full text-xs font-semibold border focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer appearance-none text-center min-w-[100px] ${getStatusColor(
                         order.status
                       )}`}
