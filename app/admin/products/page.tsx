@@ -1,16 +1,39 @@
-import { useState } from 'react'
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+
+import { useSearchParams } from 'next/navigation'
 import { useSiteStore } from '@/store/siteStore'
-import { Trash2, Edit2, Plus, Search, X, Check, Upload, Filter } from 'lucide-react'
+
+import { Trash2, Edit2, Plus, Search, X, Check, Upload, Filter, Tag } from 'lucide-react'
+
 import * as Dialog from '@radix-ui/react-dialog'
 import Image from 'next/image'
 import { Product } from '@/types'
 import { toast } from 'sonner'
 
 export default function AdminProducts() {
-  const { products, addProduct, updateProduct, deleteProduct, categories } = useSiteStore()
+  const { products, addProduct, updateProduct, deleteProduct, categories, uploadImage, addCategory } = useSiteStore()
+  const searchParams = useSearchParams()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [isGalleryUploading, setIsGalleryUploading] = useState(false)
+  const [isAddingCategory, setIsAddingCategory] = useState(false)
+
+  const [newCatName, setNewCatName] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+
+
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      handleAddNew()
+    }
+  }, [searchParams])
+
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -79,15 +102,82 @@ export default function AdminProducts() {
     setIsDialogOpen(true)
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploading(true)
+    try {
+      const publicUrl = await uploadImage(file, 'products')
+      setFormData(prev => ({ ...prev, image: publicUrl }))
+      toast.success('Image uploaded successfully')
+    } catch (error: any) {
+      console.error('Upload error:', error)
+      if (error?.message?.includes('Bucket not found')) {
+        toast.error('Storage bucket "products" not found. Please run the SQL setup script from your walkthrough.md.')
+      } else {
+        toast.error('Failed to upload image. Please check your Supabase Storage settings.')
+      }
+    } finally {
+      setIsUploading(false)
+      if (e.target) e.target.value = ''
+    }
+  }
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+
+    setIsGalleryUploading(true)
+    const toastId = toast.loading(`Uploading ${files.length} images...`)
+    try {
+      const uploadPromises = files.map(file => uploadImage(file, 'products'))
+      const publicUrls = await Promise.all(uploadPromises)
+
+      const existingImages = formData.images
+        ? formData.images.split(',').map(s => s.trim()).filter(Boolean)
+        : []
+
+      const newImages = [...existingImages, ...publicUrls].join(', ')
+      setFormData(prev => ({ ...prev, images: newImages }))
+      toast.success(`${files.length} images uploaded successfully`, { id: toastId })
+    } catch (error: any) {
+      console.error('Gallery upload error:', error)
+      toast.error('Failed to upload some images. Please try again.', { id: toastId })
+    } finally {
+      setIsGalleryUploading(false)
+      if (e.target) e.target.value = ''
+    }
+  }
+
+
+
+  const handleQuickAddCategory = async () => {
+    if (!newCatName.trim()) return
+    const slug = newCatName.toLowerCase().trim().replace(/\s+/g, '-')
+    try {
+      await addCategory({
+        name: newCatName.trim(),
+        slug
+      } as any)
+      setFormData(prev => ({ ...prev, category: slug }))
+      setNewCatName('')
+      setIsAddingCategory(false)
+      toast.success('Category added successfully')
+    } catch (error) {
+      toast.error('Failed to add category')
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
+
     e.preventDefault()
 
-    const productData: Product = {
-      id: editingId || Math.random().toString(36).substr(2, 9),
+    const productData: any = {
       name: formData.name,
       price: Number(formData.price),
       originalPrice: Number(formData.originalPrice) || undefined,
-      category: formData.category as Product['category'],
+      category: formData.category,
       image: formData.image || '/placeholder.png',
       images: formData.images.split(',').map((s: string) => s.trim()).filter(Boolean),
       description: formData.description,
@@ -100,12 +190,17 @@ export default function AdminProducts() {
     }
 
     if (editingId) {
+      productData.id = editingId
       updateProduct(productData)
     } else {
       addProduct(productData)
     }
+
     setIsDialogOpen(false)
+    setEditingId(null)
   }
+
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -268,19 +363,48 @@ export default function AdminProducts() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Category</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    required
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                  >
-                    <option value="">Select Category</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.slug}>{cat.name}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Category</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingCategory(!isAddingCategory)}
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                    >
+                      {isAddingCategory ? 'Cancel' : '+ Quick Add'}
+                    </button>
+                  </div>
+                  {isAddingCategory ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newCatName}
+                        onChange={(e) => setNewCatName(e.target.value)}
+                        placeholder="Category name"
+                        className="flex-1 px-3 py-2 border border-border rounded-lg bg-background text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleQuickAddCategory}
+                        className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+                      >
+                        <Check size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      required
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                    >
+                      <option value="">Select Category</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.slug}>{cat.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Fabric</label>
                   <input
@@ -337,22 +461,66 @@ export default function AdminProducts() {
                     className="flex-1 px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                     placeholder="/products/image.png"
                   />
-                  <button type="button" className="px-3 py-2 border border-border rounded-lg hover:bg-muted">
-                    <Upload size={18} />
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="px-3 py-2 border border-border rounded-lg hover:bg-muted disabled:opacity-50"
+                  >
+                    {isUploading ? (
+                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Upload size={18} />
+                    )}
                   </button>
+
                 </div>
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Additional Image URLs (comma separated)</label>
-                <input
-                  type="text"
-                  value={formData.images}
-                  onChange={(e) => setFormData({ ...formData, images: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                  placeholder="url1, url2, url3"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={formData.images}
+                    onChange={(e) => setFormData({ ...formData, images: e.target.value })}
+                    className="flex-1 px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                    placeholder="url1, url2, url3"
+                  />
+                  <input
+                    type="file"
+                    ref={galleryInputRef}
+                    onChange={handleGalleryUpload}
+                    className="hidden"
+                    accept="image/*"
+                    multiple
+                  />
+                  <button
+                    type="button"
+                    onClick={() => galleryInputRef.current?.click()}
+                    disabled={isGalleryUploading}
+                    className="px-3 py-2 border border-border rounded-lg hover:bg-muted disabled:opacity-50"
+                    title="Upload Multiple Images"
+                  >
+                    {isGalleryUploading ? (
+                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <Upload size={18} />
+                        <Plus size={12} className="-ml-1" />
+                      </div>
+                    )}
+                  </button>
+                </div>
               </div>
+
 
               <div className="flex gap-6 py-2">
                 <label className="flex items-center gap-2 cursor-pointer group">

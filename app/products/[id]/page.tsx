@@ -15,8 +15,9 @@ import { Product } from '@/types';
 
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { products } = useSiteStore();
+  const { products, isLoading: isStoreLoading } = useSiteStore();
   const [selectedSize, setSelectedSize] = useState<string>('');
+
   const [activeImage, setActiveImage] = useState(0);
 
   const { addItem: addToCart } = useCartStore();
@@ -25,6 +26,19 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
   // Find product from store
   const productData = products.find((p) => p.id === id);
+
+  // Loading state
+  if (isStoreLoading && !productData) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+        <Header />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   // Safety check - if product not found
   if (!productData) {
@@ -40,17 +54,21 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     )
   }
 
+
   // Adapt mock product to full Product type structure for stores
   const product = {
     ...productData,
     originalPrice: productData.originalPrice || Math.round(productData.price * 1.5),
     fabric: productData.fabric || '100% Cotton',
-    images: productData.images || [productData.image],
-    colors: productData.colors || ['Black'],
+    images: [...new Set([productData.image, ...(productData.images || [])])].filter(Boolean),
+
+
+    colors: (productData.colors && productData.colors.length > 0) ? productData.colors : ['Black'],
     inStock: true,
     featured: productData.featured || false,
     new: productData.new || false
   };
+
 
   const isFavorited = isInWishlist(product.id);
 
@@ -234,12 +252,13 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             <h2 className="text-2xl font-montserrat font-bold text-foreground mb-8">
               You Might Also Like
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="flex overflow-x-auto pb-4 gap-4 no-scrollbar snap-x snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-6 md:overflow-visible">
               {recommendedProducts.map((p: Product) => (
-                <ProductCard
-                  key={p.id}
-                  {...p}
-                />
+                <div key={p.id} className="min-w-[200px] w-[200px] md:w-full snap-start">
+                  <ProductCard
+                    {...p}
+                  />
+                </div>
               ))}
             </div>
           </div>

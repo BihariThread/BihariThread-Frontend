@@ -6,7 +6,8 @@ export interface Product {
   description: string;
   image: string;
   fabric: string;
-  category: 'oversized' | 'classic' | 'graphic' | 'limited' | 'funky' | 'minimal' | 'ipl' | 'trending';
+  category: string;
+
   images: string[];
   sizes: string[];
   colors: string[];
@@ -41,14 +42,21 @@ export interface User {
   email: string;
   phone: string;
   addresses: Address[];
+  password_set?: boolean;
   createdAt: string;
 }
 
+
 export interface Order {
   id: string;
+  userId?: string;
+  customerName?: string;
   items: CartItem[];
   total: number;
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered';
+  status: 'pending' | 'paid' | 'confirmed' | 'shipped' | 'delivered' | 'failed';
+  razorpay_order_id?: string;
+  razorpay_payment_id?: string;
+  razorpay_signature?: string;
   createdAt: string;
   shippingAddress: Address;
   billingAddress: Address;
@@ -83,7 +91,10 @@ export interface Enquiry {
   status: 'pending' | 'quoted' | 'contacted' | 'closed';
   createdAt: string;
   message: string;
+  selectedDesigns?: string[];
+  designUrl?: string;
 }
+
 
 export interface SiteSettings {
   heroTitle: string;
@@ -100,4 +111,6 @@ export interface Category {
   id: string;
   name: string;
   slug: string;
+  showOnHome: boolean;
 }
+

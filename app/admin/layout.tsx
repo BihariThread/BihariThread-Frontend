@@ -13,10 +13,13 @@ import {
   Menu,
   X,
   LogOut,
-  Settings
+  Settings,
+  Tag
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { useSiteStore } from '@/store/siteStore'
 import { useRouter } from 'next/navigation'
+
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname()
@@ -24,23 +27,30 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMounting, setIsMounting] = useState(true)
   const { isAdminLoggedIn, adminLogout } = useAuthStore()
+  const { fetchInitialData } = useSiteStore()
 
   useEffect(() => {
+
     setIsMounting(false)
     if (!isAdminLoggedIn && pathname !== '/admin') {
       router.push('/admin')
     }
-  }, [isAdminLoggedIn, pathname, router])
+    if (isAdminLoggedIn) {
+      fetchInitialData()
+    }
+  }, [isAdminLoggedIn, pathname, router, fetchInitialData])
+
 
   const adminLinks = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/admin/dashboard' },
     { icon: Package, label: 'Products', href: '/admin/products' },
-    { icon: Settings, label: 'Categories', href: '/admin/categories' },
+    { icon: Tag, label: 'Categories', href: '/admin/categories' },
     { icon: ShoppingBag, label: 'Orders', href: '/admin/orders' },
     { icon: MessageSquare, label: 'Enquiries', href: '/admin/enquiries' },
     { icon: Users, label: 'Users', href: '/admin/users' },
     { icon: Settings, label: 'Site Settings', href: '/admin/settings' },
   ]
+
 
   const isActive = (href: string) => pathname === href
 
@@ -79,7 +89,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         <div className="flex flex-col h-full">
           <div className="p-6 border-b border-border flex items-center justify-between">
             <Link href="/admin/dashboard" className="text-2xl font-montserrat font-bold text-primary">
-              BIHARITHREAD<span className="text-accent">ADMIN</span>
+              BT<span className="text-accent">ADMIN</span>
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}

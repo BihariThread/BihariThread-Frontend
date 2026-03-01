@@ -3,7 +3,12 @@
 import { useState } from 'react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
-import { Upload, Send } from 'lucide-react'
+import { Upload, Send, FileText } from 'lucide-react'
+import { useSiteStore } from '@/store/siteStore'
+import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
+
+
 
 export default function CustomPrint() {
   const [formData, setFormData] = useState({
@@ -16,6 +21,12 @@ export default function CustomPrint() {
   })
   const [selectedDesigns, setSelectedDesigns] = useState<string[]>([])
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+
+  const { addEnquiry, uploadImage } = useSiteStore()
+  const router = useRouter()
+
 
   const availableDesigns = [
     'Heritage Classic',
@@ -28,32 +39,81 @@ export default function CustomPrint() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData((prev: any) => ({ ...prev, [name]: value }))
   }
 
+
   const handleDesignToggle = (design: string) => {
-    setSelectedDesigns((prev) =>
-      prev.includes(design) ? prev.filter((d) => d !== design) : [...prev, design]
+    setSelectedDesigns((prev: string[]) =>
+      prev.includes(design) ? prev.filter((d: string) => d !== design) : [...prev, design]
     )
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log('Form submitted:', { ...formData, selectedDesigns })
-    setIsSubmitted(true)
-    setTimeout(() => {
-      setIsSubmitted(false)
-      setFormData({
-        businessName: '',
-        contactPerson: '',
-        phone: '',
-        email: '',
-        estimatedQuantity: '',
-        notes: '',
-      })
-      setSelectedDesigns([])
-    }, 3000)
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File size exceeds 10MB limit')
+        return
+      }
+      setSelectedFile(file)
+    }
   }
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsUploading(true)
+    const toastId = toast.loading('Submitting enquiry...')
+
+    try {
+      let designUrl = ''
+      if (selectedFile) {
+        designUrl = await uploadImage(selectedFile, 'products') // Using products bucket for now
+      }
+
+      const enquiryData: any = {
+        businessName: formData.businessName,
+        contactPerson: formData.contactPerson,
+        phone: formData.phone,
+        email: formData.email,
+        quantity: Number(formData.estimatedQuantity),
+        message: formData.notes,
+        selectedDesigns,
+      }
+
+      if (designUrl) {
+        enquiryData.designUrl = designUrl
+      }
+
+      await addEnquiry(enquiryData)
+
+
+      setIsSubmitted(true)
+      toast.success('Enquiry submitted successfully!', { id: toastId })
+
+      setTimeout(() => {
+        setIsSubmitted(false)
+        setFormData({
+          businessName: '',
+          contactPerson: '',
+          phone: '',
+          email: '',
+          estimatedQuantity: '',
+          notes: '',
+        })
+        setSelectedDesigns([])
+        setSelectedFile(null)
+      }, 3000)
+    } catch (error) {
+      console.error('Enquiry submission error:', error)
+      toast.error('Failed to submit enquiry. Please try again.', { id: toastId })
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -232,21 +292,48 @@ export default function CustomPrint() {
                 <h3 className="text-xl font-montserrat font-bold text-foreground mb-6">
                   Upload Your Design (Optional)
                 </h3>
-                <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:bg-muted/50 transition-colors duration-200 cursor-pointer group">
-                  <Upload size={32} className="mx-auto text-accent mb-3 group-hover:scale-110 transition-transform duration-200" />
-                  <p className="font-semibold text-foreground mb-2">
-                    Drag and drop your design here
-                  </p>
-                  <p className="text-sm text-foreground/70">or click to browse files</p>
+                <div
+                  onClick={() => document.getElementById('design-upload')?.click()}
+                  className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:bg-muted/50 transition-colors duration-200 cursor-pointer group"
+                >
+                  {selectedFile ? (
+                    <div className="flex flex-col items-center">
+                      <FileText size={32} className="text-accent mb-3" />
+                      <p className="font-semibold text-foreground mb-2">
+                        {selectedFile.name}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedFile(null)
+                        }}
+                        className="text-xs text-red-500 hover:underline"
+                      >
+                        Remove file
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload size={32} className="mx-auto text-accent mb-3 group-hover:scale-110 transition-transform duration-200" />
+                      <p className="font-semibold text-foreground mb-2">
+                        Drag and drop your design here
+                      </p>
+                      <p className="text-sm text-foreground/70">or click to browse files</p>
+                    </>
+                  )}
                   <p className="text-xs text-foreground/50 mt-2">
                     Supported: PDF, AI, PSD, PNG, JPG (Max 10MB)
                   </p>
                   <input
+                    id="design-upload"
                     type="file"
                     accept=".pdf,.ai,.psd,.png,.jpg,.jpeg"
                     className="hidden"
+                    onChange={handleFileChange}
                   />
                 </div>
+
               </div>
 
               {/* Additional Notes */}
@@ -268,11 +355,13 @@ export default function CustomPrint() {
               <div className="pt-6">
                 <button
                   type="submit"
-                  className="w-full px-8 py-4 bg-primary text-primary-foreground font-semibold rounded-lg hover:opacity-90 transition-all duration-200 flex items-center justify-center gap-2 group"
+                  disabled={isUploading}
+                  className="w-full px-8 py-4 bg-primary text-primary-foreground font-semibold rounded-lg hover:opacity-90 transition-all duration-200 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Send size={20} />
-                  Submit Enquiry
+                  <Send size={20} className={isUploading ? 'animate-pulse' : ''} />
+                  {isUploading ? 'Submitting...' : 'Submit Enquiry'}
                 </button>
+
                 <p className="text-xs text-foreground/50 text-center mt-4">
                   We'll review your request and send you a custom quote within 24 hours.
                 </p>

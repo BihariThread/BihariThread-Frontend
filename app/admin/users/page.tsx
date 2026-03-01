@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { useSiteStore } from '@/store/siteStore'
 import { Mail, ShoppingBag, Search, Phone, MapPin, Calendar } from 'lucide-react'
@@ -7,11 +9,9 @@ export default function AdminUsers() {
   const [searchQuery, setSearchQuery] = useState('')
 
   const getUserOrders = (userId: string) => {
-    return orders.filter((order) => {
-      const user = users.find((u) => u.id === userId)
-      return user && (order as any).customerName === user.name
-    })
+    return orders.filter((order) => order.userId === userId)
   }
+
 
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -77,9 +77,9 @@ export default function AdminUsers() {
                 </p>
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                   <Phone size={14} />
-                  {/* Mock phone since it's not in type yet, or use generic */}
-                  +91 98765 43210
+                  {user.phone || 'N/A'}
                 </p>
+
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                   <Calendar size={14} />
                   Joined {formatDate(user.createdAt)}

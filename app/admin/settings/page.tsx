@@ -9,11 +9,21 @@ export default function AdminSettings() {
     const { siteSettings, updateSiteSettings } = useSiteStore()
     const [formData, setFormData] = useState(siteSettings)
 
-    const handleSubmit = (e: React.FormEvent) => {
+    // Sync form data when siteSettings loads
+    useState(() => {
+        setFormData(siteSettings)
+    })
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        updateSiteSettings(formData)
-        toast.success('Settings updated successfully!')
+        try {
+            await updateSiteSettings(formData)
+            toast.success('Settings updated successfully!')
+        } catch (error) {
+            toast.error('Failed to update settings')
+        }
     }
+
 
     return (
         <div className="space-y-6 animate-fade-in">

@@ -1,14 +1,19 @@
 'use client'
 
-import { useState } from 'react'
-import { mockProducts } from '@/lib/mock-data'
+import { useState, useEffect } from 'react'
+import { useSiteStore } from '@/store/siteStore'
 
 export default function TrendingManager() {
+  const { products } = useSiteStore()
   const [selectedCategory, setSelectedCategory] = useState('trending')
   const [trendingProducts, setTrendingProducts] = useState(
-    mockProducts.filter((p) => p.category === 'trending')
+    products.filter((p) => p.category === 'trending')
   )
   const [bannerText, setBannerText] = useState('Trending This Week')
+
+  useEffect(() => {
+    setTrendingProducts(products.filter((p) => p.featured || p.category.toLowerCase() === 'trending'))
+  }, [products])
 
   const categories = ['Trending', 'IPL', 'CSK', 'Funky', 'Classic', 'Minimal']
 
@@ -61,8 +66,8 @@ export default function TrendingManager() {
               key={cat}
               onClick={() => setSelectedCategory(cat.toLowerCase())}
               className={`py-3 px-4 rounded-lg font-semibold transition-all duration-200 ${selectedCategory === cat.toLowerCase()
-                  ? 'bg-accent text-accent-foreground'
-                  : 'border border-border text-foreground hover:border-accent'
+                ? 'bg-accent text-accent-foreground'
+                : 'border border-border text-foreground hover:border-accent'
                 }`}
             >
               {cat}
@@ -77,15 +82,15 @@ export default function TrendingManager() {
           Featured Products ({trendingProducts.length})
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {mockProducts.map((product) => {
+          {products.map((product) => {
             const isTrending = trendingProducts.find((p) => p.id === product.id)
             return (
               <div
                 key={product.id}
                 onClick={() => handleToggleTrending(product)}
                 className={`p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${isTrending
-                    ? 'border-accent bg-accent/10'
-                    : 'border-border hover:border-accent/50'
+                  ? 'border-accent bg-accent/10'
+                  : 'border-border hover:border-accent/50'
                   }`}
               >
                 <div className="flex items-start justify-between mb-3">

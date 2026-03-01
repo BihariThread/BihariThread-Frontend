@@ -3,6 +3,7 @@ import { Poppins, Montserrat } from 'next/font/google'
 
 import './globals.css'
 import { Toaster } from 'sonner'
+import { StoreProvider } from '@/components/StoreProvider'
 
 
 const poppins = Poppins({
@@ -42,7 +43,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${poppins.variable} ${montserrat.variable}`}>
       <body className="font-poppins antialiased bg-background text-foreground">
-        {children}
+        <StoreProvider>
+          {children}
+        </StoreProvider>
         <Toaster position="top-center" richColors />
       </body>
     </html>

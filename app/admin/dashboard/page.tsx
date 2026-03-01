@@ -8,7 +8,7 @@ export default function AdminDashboard() {
   const { products, orders, users, enquiries } = useSiteStore()
 
   const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0)
-  const pendingOrders = orders.filter((o) => o.status === 'pending' || o.status === 'processing').length
+  const pendingOrders = orders.filter((o) => o.status === 'pending' || o.status === 'confirmed').length
   const pendingEnquiries = enquiries.filter((e) => e.status === 'pending').length
 
   const stats = [
@@ -56,11 +56,12 @@ export default function AdminDashboard() {
           <p className="text-muted-foreground mt-1">Overview of your store's performance</p>
         </div>
         <div className="flex gap-2">
-          <Link href="/admin/products/new">
+          <Link href="/admin/products?new=true">
             <button className="bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity">
               + Add Product
             </button>
           </Link>
+
         </div>
       </div>
 
@@ -111,13 +112,14 @@ export default function AdminDashboard() {
                 {orders.slice(0, 5).map((order) => (
                   <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors duration-200">
                     <td className="py-3 px-4 font-medium">{order.id}</td>
-                    <td className="py-3 px-4">{(order as any).customerName || 'Anonymous'}</td>
+                    <td className="py-3 px-4">{order.customerName || (order.shippingAddress as any)?.fullName || 'Anonymous'}</td>
+
                     <td className="py-3 px-4 text-right font-medium">₹{order.total}</td>
                     <td className="py-3 px-4 text-center">
                       <span
                         className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${order.status === 'delivered'
                           ? 'bg-green-100 text-green-700'
-                          : order.status === 'processing'
+                          : order.status === 'confirmed'
                             ? 'bg-blue-100 text-blue-700'
                             : 'bg-yellow-100 text-yellow-700'
                           }`}
@@ -157,7 +159,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
             ))}
-            {mockEnquiries.length === 0 && (
+            {enquiries.length === 0 && (
               <p className="text-center text-muted-foreground text-sm py-4">No recent enquiries</p>
             )}
           </div>
