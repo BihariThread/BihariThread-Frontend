@@ -8,10 +8,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Trash2, Plus, Minus, CreditCard, Banknote, Landmark, CheckCircle, ArrowLeft, Loader2, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import FadeIn from '@/components/FadeIn';
+import Script from 'next/script';
 
 type CheckoutStep = 'cart' | 'address' | 'payment' | 'success';
 
@@ -25,7 +26,21 @@ export default function CartPage() {
     const [isAddingAddress, setIsAddingAddress] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
 
-    const { register, handleSubmit, reset, formState: { errors } } = useForm();
+    const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm();
+
+    // Autofill address form when opened
+    useEffect(() => {
+        if (isAddingAddress && user) {
+            reset({
+                fullName: user.name || '',
+                phone: user.phone || '',
+                addressLine1: '',
+                city: '',
+                state: '',
+                pincode: ''
+            });
+        }
+    }, [isAddingAddress, user, reset]);
 
     const total = getTotal();
     const shipping = 0; // Free shipping
@@ -53,28 +68,112 @@ export default function CartPage() {
     };
 
     const handlePlaceOrder = async () => {
-        setIsProcessing(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        if (!selectedAddress) {
+            toast.error('Please select a shipping address');
+            return;
+        }
 
-        toast.success('Order placed successfully!');
-        clearCart();
-        setStep('success');
-        setIsProcessing(false);
+        const address = user?.addresses.find(a => a.id === selectedAddress);
+        if (!address) {
+            toast.error('Selected address not found');
+            return;
+        }
+
+        setIsProcessing(true);
+        try {
+            // 1. Create order in our backend
+            const response = await fetch('/api/create-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user?.id,
+                    total: finalTotal,
+                    items: items,
+                    shippingAddress: address,
+                    billingAddress: address, // For now using same for both
+                }),
+            });
+
+            const orderData = await response.json();
+
+            if (!response.ok) {
+                throw new Error(orderData.error || 'Failed to create order');
+            }
+
+            // 2. Open Razorpay Checkout
+            const options = {
+                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY,
+                amount: orderData.amount,
+                currency: orderData.currency,
+                name: "BIHARI THREAD",
+                description: "Purchase from Bihari Thread",
+                image: "/logo.png",
+                order_id: orderData.id,
+                handler: async function (response: any) {
+                    // This is called when payment is successful
+                    console.log("Payment Successful:", response);
+
+                    // We can optionally verify here, but the webhook will handle the status update reliably
+                    toast.success('Payment successful! Your order is being processed.');
+                    clearCart();
+                    setStep('success');
+                },
+                prefill: {
+                    name: user?.name,
+                    email: user?.email,
+                    contact: user?.phone
+                },
+                notes: {
+                    address: `${address.addressLine1}, ${address.city}`,
+                    orderId: orderData.orderId
+                },
+                theme: {
+                    color: "#000000" // Pick a color that matches the brand
+                },
+                modal: {
+                    ondismiss: function () {
+                        setIsProcessing(false);
+                    }
+                }
+            };
+
+            const rzp = new (window as any).Razorpay(options);
+            rzp.on('payment.failed', function (response: any) {
+                console.error("Payment Failed:", response.error);
+                toast.error(response.error.description || 'Payment failed');
+                setIsProcessing(false);
+            });
+            rzp.open();
+
+        } catch (error: any) {
+            console.error('Checkout error:', error);
+            toast.error(error.message || 'Something went wrong. Please try again.');
+            setIsProcessing(false);
+        }
     };
 
-    const onSubmitAddress = (data: any) => {
-        const newAddress = {
-            id: Math.random().toString(36).substr(2, 9),
-            ...data,
-            type: 'shipping',
-            isDefault: false,
-        };
-        addAddress(newAddress);
-        setIsAddingAddress(false);
-        setSelectedAddress(newAddress.id);
-        reset();
-        toast.success('Address added successfully');
+    const [isSavingAddress, setIsSavingAddress] = useState(false);
+
+    const onSubmitAddress = async (data: any) => {
+        setIsSavingAddress(true);
+        try {
+            const newAddress = {
+                ...data,
+                type: 'shipping' as const,
+                isDefault: false,
+            };
+            const savedAddress = await addAddress(newAddress);
+            if (savedAddress) {
+                setIsAddingAddress(false);
+                setSelectedAddress(savedAddress.id);
+                toast.success('Address added successfully');
+            }
+        } catch (error: any) {
+            console.error('Failed to save address:', error);
+            toast.error(error.message || 'Failed to save address');
+        } finally {
+            setIsSavingAddress(false);
+        }
     };
 
     if (step === 'success') {
@@ -106,6 +205,7 @@ export default function CartPage() {
 
     return (
         <div className="min-h-screen bg-background flex flex-col">
+            <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
             <Header />
             <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 w-full">
                 {/* Stepper */}
@@ -232,8 +332,8 @@ export default function CartPage() {
                                                 key={addr.id}
                                                 onClick={() => setSelectedAddress(addr.id)}
                                                 className={`p-4 border rounded-xl cursor-pointer transition-all flex items-start gap-4 ${selectedAddress === addr.id
-                                                        ? 'border-accent bg-accent/5 ring-1 ring-accent'
-                                                        : 'border-border hover:border-accent/50 hover:bg-muted/30'
+                                                    ? 'border-accent bg-accent/5 ring-1 ring-accent'
+                                                    : 'border-border hover:border-accent/50 hover:bg-muted/30'
                                                     }`}
                                             >
                                                 <div className={`mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedAddress === addr.id ? 'border-accent' : 'border-muted-foreground'}`}>
@@ -281,8 +381,20 @@ export default function CartPage() {
                                                 <input {...register('pincode', { required: true })} placeholder="Pincode" className="w-full p-3 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all" />
                                             </div>
                                             <div className="flex gap-3 pt-2">
-                                                <button type="submit" className="flex-1 bg-primary text-primary-foreground py-2.5 rounded-lg font-medium hover:opacity-90">Save Address</button>
-                                                <button type="button" onClick={() => setIsAddingAddress(false)} className="flex-1 border border-border py-2.5 rounded-lg font-medium hover:bg-muted text-muted-foreground">Cancel</button>
+                                                <button
+                                                    type="submit"
+                                                    disabled={isSavingAddress}
+                                                    className="flex-1 bg-primary text-primary-foreground py-2.5 rounded-lg font-medium hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    {isSavingAddress ? (
+                                                        <>
+                                                            <Loader2 className="animate-spin" size={18} /> Saving...
+                                                        </>
+                                                    ) : (
+                                                        'Save Address'
+                                                    )}
+                                                </button>
+                                                <button type="button" onClick={() => setIsAddingAddress(false)} className="flex-1 border border-border py-2.5 rounded-lg font-medium hover:bg-muted text-muted-foreground disabled:opacity-50" disabled={isSavingAddress}>Cancel</button>
                                             </div>
                                         </form>
                                     </div>

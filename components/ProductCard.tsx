@@ -150,17 +150,17 @@ const ProductCard = ({
           </button>
         </div>
 
-        <div className="mt-4 space-y-1">
+        <div className="mt-2 md:mt-4 space-y-0.5 md:space-y-1">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+              <p className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-wider font-semibold">
                 {category}
               </p>
-              <h3 className="text-lg font-medium text-foreground group-hover:text-primary transition-colors line-clamp-1">
+              <h3 className="text-sm md:text-lg font-medium text-foreground group-hover:text-primary transition-colors line-clamp-1">
                 {name}
               </h3>
             </div>
-            <p className="text-lg font-bold text-primary">₹{price}</p>
+            <p className="text-base md:text-lg font-bold text-primary">₹{price}</p>
           </div>
         </div>
       </Link>

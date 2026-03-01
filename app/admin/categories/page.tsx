@@ -5,9 +5,11 @@ import { useSiteStore } from '@/store/siteStore'
 import { Trash2, Plus, Search, Tag } from 'lucide-react'
 
 export default function AdminCategories() {
-    const { categories, addCategory, deleteCategory } = useSiteStore()
+    const { categories, addCategory, updateCategory, deleteCategory } = useSiteStore()
     const [searchQuery, setSearchQuery] = useState('')
     const [newCategoryName, setNewCategoryName] = useState('')
+    const [showOnHome, setShowOnHome] = useState(false)
+
 
     const filteredCategories = categories.filter(cat =>
         cat.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -24,12 +26,22 @@ export default function AdminCategories() {
         }
 
         addCategory({
-            id: Math.random().toString(36).substr(2, 9),
             name: newCategoryName.trim(),
-            slug
-        })
+            slug,
+            showOnHome
+        } as any)
+
         setNewCategoryName('')
+        setShowOnHome(false)
     }
+
+    const handleToggleHome = (cat: any) => {
+        updateCategory({
+            ...cat,
+            showOnHome: !cat.showOnHome
+        })
+    }
+
 
     const handleDelete = (id: string, name: string) => {
         if (confirm(`Are you sure you want to delete "${name}"? This might affect products in this category.`)) {
@@ -68,7 +80,19 @@ export default function AdminCategories() {
                                     className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 outline-none"
                                 />
                             </div>
+                            <div className="flex items-center gap-2 py-2">
+                                <label className="flex items-center gap-2 cursor-pointer group">
+                                    <input
+                                        type="checkbox"
+                                        checked={showOnHome}
+                                        onChange={(e) => setShowOnHome(e.target.checked)}
+                                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+                                    />
+                                    <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Show on Home Page</span>
+                                </label>
+                            </div>
                             <button
+
                                 type="submit"
                                 className="w-full py-2 bg-primary text-primary-foreground font-medium rounded-lg hover:opacity-90 transition-opacity"
                             >
@@ -97,7 +121,9 @@ export default function AdminCategories() {
                                 <tr>
                                     <th className="text-left py-4 px-6 font-semibold text-muted-foreground">Category Name</th>
                                     <th className="text-left py-4 px-6 font-semibold text-muted-foreground">Slug</th>
+                                    <th className="text-center py-4 px-6 font-semibold text-muted-foreground">Home Page</th>
                                     <th className="text-right py-4 px-6 font-semibold text-muted-foreground">Actions</th>
+
                                 </tr>
                             </thead>
                             <tbody>
@@ -112,6 +138,18 @@ export default function AdminCategories() {
                                         <td className="py-4 px-6 font-mono text-xs text-muted-foreground">
                                             {cat.slug}
                                         </td>
+                                        <td className="py-4 px-6 text-center">
+                                            <button
+                                                onClick={() => handleToggleHome(cat)}
+                                                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${cat.showOnHome
+                                                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                                    }`}
+                                            >
+                                                {cat.showOnHome ? 'Visible' : 'Hidden'}
+                                            </button>
+                                        </td>
+
                                         <td className="py-4 px-6 text-right">
                                             <button
                                                 onClick={() => handleDelete(cat.id, cat.name)}

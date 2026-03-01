@@ -13,16 +13,24 @@ export default function Shop() {
   const [priceRange, setPriceRange] = useState([0, 1000])
   const [showFilters, setShowFilters] = useState(false)
   const [sortBy, setSortBy] = useState('featured')
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([])
+
 
   const categories = ['All', ...storeCategories.map(c => c.name)]
 
   const filteredProducts = products.filter((product) => {
-    const categoryMatch =
-      selectedCategory === 'all' ||
-      product.category.toLowerCase() === selectedCategory.toLowerCase()
+    const isAll = selectedCategory === 'all'
+    const categoryMatch = isAll ||
+      product.category.toLowerCase() === selectedCategory.toLowerCase() ||
+      storeCategories.find(c => c.slug === product.category)?.name.toLowerCase() === selectedCategory.toLowerCase()
+
+    const sizeMatch = selectedSizes.length === 0 ||
+      product.sizes.some(size => selectedSizes.includes(size))
+
     const priceMatch = product.price >= priceRange[0] && product.price <= priceRange[1]
-    return categoryMatch && priceMatch
+    return categoryMatch && priceMatch && sizeMatch
   })
+
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     if (sortBy === 'price-low') return a.price - b.price
@@ -69,7 +77,7 @@ export default function Shop() {
                         value={cat.toLowerCase()}
                         checked={selectedCategory === cat.toLowerCase()}
                         onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="w-4 h-4 rounded border border-border"
+                        className="w-4 h-4 rounded border border-primary text-primary focus:ring-primary/20"
                       />
                       <span className="text-foreground/80 group-hover:text-foreground transition-colors duration-200">
                         {cat}
@@ -88,29 +96,37 @@ export default function Shop() {
                   <input
                     type="range"
                     min="0"
-                    max="1000"
+                    max="5000"
+                    step="100"
                     value={priceRange[1]}
                     onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
-                    className="w-full"
+                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
                   />
-                  <div className="flex gap-4">
-                    <input
-                      type="number"
-                      value={priceRange[0]}
-                      onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
-                      placeholder="Min"
-                      className="flex-1 px-3 py-2 border border-border rounded-lg text-foreground bg-background focus:outline-none focus:ring-2 focus:ring-accent"
-                    />
-                    <input
-                      type="number"
-                      value={priceRange[1]}
-                      onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
-                      placeholder="Max"
-                      className="flex-1 px-3 py-2 border border-border rounded-lg text-foreground bg-background focus:outline-none focus:ring-2 focus:ring-accent"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2">
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
+                      <input
+                        type="number"
+                        value={priceRange[0]}
+                        onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
+                        placeholder="Min"
+                        className="w-full pl-7 pr-3 py-2 border border-border rounded-lg text-sm text-foreground bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                      />
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
+                      <input
+                        type="number"
+                        value={priceRange[1]}
+                        onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
+                        placeholder="Max"
+                        className="w-full pl-7 pr-3 py-2 border border-border rounded-lg text-sm text-foreground bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
+
 
               {/* Size Filter */}
               <div className="border-t border-border pt-6">
@@ -121,13 +137,24 @@ export default function Shop() {
                   {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => (
                     <button
                       key={size}
-                      className="py-2 px-3 border border-border rounded-lg hover:border-accent hover:text-accent transition-all duration-200 text-sm font-medium"
+                      onClick={() => {
+                        setSelectedSizes(prev =>
+                          prev.includes(size)
+                            ? prev.filter(s => s !== size)
+                            : [...prev, size]
+                        )
+                      }}
+                      className={`py-2 px-3 border rounded-lg transition-all duration-200 text-sm font-medium ${selectedSizes.includes(size)
+                        ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                        : 'border-border text-foreground hover:border-primary hover:text-primary'
+                        }`}
                     >
                       {size}
                     </button>
                   ))}
                 </div>
               </div>
+
             </div>
           </div>
 
@@ -165,7 +192,7 @@ export default function Shop() {
 
             {/* Product Grid */}
             {sortedProducts.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
                 {sortedProducts.map((product) => (
                   <ProductCard key={product.id} {...product} />
                 ))}
@@ -176,8 +203,10 @@ export default function Shop() {
                 <button
                   onClick={() => {
                     setSelectedCategory('all')
-                    setPriceRange([0, 1000])
+                    setPriceRange([0, 5000])
+                    setSelectedSizes([])
                   }}
+
                   className="mt-4 px-6 py-2 bg-accent text-accent-foreground rounded-lg hover:opacity-90 transition-opacity duration-200"
                 >
                   Reset Filters

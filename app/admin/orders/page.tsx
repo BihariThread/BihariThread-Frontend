@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react'
 import { useSiteStore } from '@/store/siteStore'
 import { ChevronDown, Search, Filter, Eye, MoreHorizontal } from 'lucide-react'
@@ -8,8 +10,10 @@ export default function AdminOrders() {
   const [statusFilter, setStatusFilter] = useState('all')
 
   const filteredOrders = orders.filter(order => {
+    const customerName = order.customerName || (order.shippingAddress as any)?.fullName || 'Anonymous';
     const matchesSearch = order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (order as any).customerName?.toLowerCase().includes(searchQuery.toLowerCase());
+      customerName.toLowerCase().includes(searchQuery.toLowerCase());
+
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -94,9 +98,10 @@ export default function AdminOrders() {
                   <td className="py-4 px-6 font-medium text-foreground">#{order.id}</td>
                   <td className="py-4 px-6 text-foreground">
                     <div className="flex flex-col">
-                      <span className="font-medium">{(order as any).customerName || 'Anonymous'}</span>
-                      <span className="text-xs text-muted-foreground">{order.items.length} items</span>
+                      <span className="font-medium">{order.customerName || (order.shippingAddress as any)?.fullName || 'Anonymous'}</span>
+                      <span className="text-xs text-muted-foreground">{order.items?.length || 0} items</span>
                     </div>
+
                   </td>
                   <td className="py-4 px-6 text-muted-foreground">
                     {formatDate(order.createdAt)}

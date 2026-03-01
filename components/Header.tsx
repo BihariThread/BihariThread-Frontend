@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Menu, X, ShoppingCart, User, Heart } from 'lucide-react'
+import { Menu, X, ShoppingCart, User, Heart, ShoppingBag } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useWishlistStore } from '@/store/wishlistStore'
 import { useAuthStore } from '@/store/authStore'
@@ -101,9 +101,23 @@ export default function Header() {
                   </button>
                   <div className="absolute right-0 mt-2 w-48 bg-background border border-border rounded-md shadow-lg py-1 px-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right">
                     <div className="px-4 py-2 border-b border-border">
-                      <p className="text-sm font-medium">{user?.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                      <p className="text-sm font-medium truncate">{user?.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user?.phone}</p>
                     </div>
+
+                    <button
+                      onClick={openAuthModal}
+                      className="block w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted rounded-sm mt-1"
+                    >
+                      My Profile
+                    </button>
+
+                    <Link
+                      href="/orders"
+                      className="block w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted rounded-sm"
+                    >
+                      My Orders
+                    </Link>
 
                     <button onClick={logout} className="block w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-muted rounded-sm">
                       Logout
@@ -166,9 +180,14 @@ export default function Header() {
                     )}
                   </button>
                 </Link>
+                <Link href="/orders" onClick={() => setIsOpen(false)}>
+                  <button className="p-2 hover:bg-muted rounded-lg transition-colors duration-200">
+                    <ShoppingBag size={20} className="text-foreground" />
+                  </button>
+                </Link>
                 <button
                   onClick={() => {
-                    if (!isLoggedIn) openAuthModal();
+                    openAuthModal();
                     setIsOpen(false);
                   }}
                   className="p-2 hover:bg-muted rounded-lg transition-colors duration-200"
