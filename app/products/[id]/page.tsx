@@ -64,7 +64,8 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
 
 
     colors: (productData.colors && productData.colors.length > 0) ? productData.colors : ['Black'],
-    inStock: true,
+    inStock: productData.inStock !== false && (productData.stockQuantity ?? 50) > 0,
+    stockQuantity: productData.inStock === false ? 0 : (productData.stockQuantity ?? 50),
     featured: productData.featured || false,
     new: productData.new || false
   };
@@ -88,6 +89,12 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
       toast.error('Please select a size');
       return;
     }
+
+    if (product.stockQuantity <= 0) {
+      toast.error('Sorry, this product is currently out of stock.');
+      return;
+    }
+
     addToCart(product, selectedSize, product.colors[0]); // Default color for now
     toast.success('Added to cart');
   };
@@ -121,6 +128,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                   src={product.images[activeImage]}
                   alt={product.name}
                   fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
                   className="object-cover"
                   priority
                 />
@@ -137,6 +145,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                       src={img}
                       alt={`${product.name} view ${index + 1}`}
                       fill
+                      sizes="100px"
                       className="object-cover"
                     />
                   </button>
@@ -164,6 +173,17 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 <h1 className="text-3xl md:text-4xl font-montserrat font-bold text-foreground mb-4">
                   {product.name}
                 </h1>
+
+                {/* Dynamic Stock Badge */}
+                {product.stockQuantity > 0 && product.stockQuantity <= 10 && (
+                  <div className="mb-4 inline-block animate-bounce relative">
+                    <div className="bg-red-500 text-white text-sm font-bold px-4 py-2 rounded-full shadow-lg shadow-red-500/30 flex items-center gap-2">
+                      <span className="text-lg">🔥</span>
+                      Hurry Up! Only {product.stockQuantity} left in stock.
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-baseline gap-4 mb-6">
                   <span className="text-3xl font-bold text-primary">₹{product.price}</span>
                   <span className="text-xl text-muted-foreground line-through">₹{product.originalPrice}</span>
@@ -204,10 +224,11 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
               <div className="flex gap-4 pt-4 border-t border-border">
                 <button
                   onClick={handleAddToCart}
-                  className="flex-1 bg-primary text-primary-foreground py-4 rounded-lg font-semibold text-lg hover:opacity-90 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group"
+                  disabled={product.stockQuantity <= 0}
+                  className="flex-1 bg-primary text-primary-foreground py-4 rounded-lg font-semibold text-lg hover:opacity-90 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ShoppingCart size={24} className="group-hover:scale-110 transition-transform" />
-                  Add to Cart
+                  {product.stockQuantity <= 0 ? 'Out of Stock' : 'Add to Cart'}
                 </button>
                 <button
                   onClick={handleWishlistToggle}

@@ -66,6 +66,23 @@ export async function POST(req: Request) {
             .update({ razorpay_order_id: rpOrder.id })
             .eq('id', dbOrder.id);
 
+        // 5. Deduct stock for each item
+        for (const item of items) {
+            const { data: productData } = await supabase
+                .from('products')
+                .select('stockQuantity')
+                .eq('id', item.product.id)
+                .single();
+
+            if (productData) {
+                const newQuantity = Math.max(0, (productData.stockQuantity || 0) - item.quantity);
+                await supabase
+                    .from('products')
+                    .update({ stockQuantity: newQuantity })
+                    .eq('id', item.product.id);
+            }
+        }
+
         return NextResponse.json({
             id: rpOrder.id,
             amount: rpOrder.amount,

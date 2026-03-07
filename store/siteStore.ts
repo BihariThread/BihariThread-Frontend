@@ -89,7 +89,7 @@ export const useSiteStore = create<SiteState>()(
             fetchInitialData: async () => {
                 set({ isLoading: true, error: null })
                 try {
-                    await Promise.all([
+                    const results = await Promise.allSettled([
                         get().fetchProducts(),
                         get().fetchCategories(),
                         get().fetchOffers(),
@@ -98,6 +98,10 @@ export const useSiteStore = create<SiteState>()(
                         get().fetchUsers(),
                         get().fetchSiteSettings()
                     ])
+                    const failed = results.filter(r => r.status === 'rejected')
+                    if (failed.length > 0) {
+                        console.warn('Some admin fetches failed:', failed)
+                    }
                 } catch (err: any) {
                     set({ error: err.message })
                 } finally {
@@ -151,19 +155,34 @@ export const useSiteStore = create<SiteState>()(
             },
 
             fetchOrders: async () => {
-                const { data, error } = await supabase.from('orders').select('*').order('createdAt', { ascending: false })
-                if (error) throw error
-                set({ orders: data as Order[] })
+                try {
+                    const res = await fetch('/api/orders/admin');
+                    if (!res.ok) throw new Error('Failed to fetch orders');
+                    const data = await res.json();
+                    set({ orders: data as Order[] });
+                } catch (error) {
+                    console.error('Error fetching admin orders:', error);
+                }
             },
 
             setOrders: (orders) => set({ orders }),
 
             updateOrderStatus: async (id, status) => {
-                const { error } = await supabase.from('orders').update({ status }).eq('id', id)
-                if (error) throw error
-                set((state) => ({
-                    orders: state.orders.map((o) => (o.id === id ? { ...o, status } : o))
-                }))
+                try {
+                    const res = await fetch('/api/orders/admin', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id, status })
+                    });
+                    if (!res.ok) throw new Error('Failed to update order status');
+
+                    set((state) => ({
+                        orders: state.orders.map((o) => (o.id === id ? { ...o, status } : o))
+                    }));
+                } catch (error) {
+                    console.error('Error updating order status:', error);
+                    throw error;
+                }
             },
 
             fetchUsers: async () => {
@@ -248,10 +267,16 @@ export const useSiteStore = create<SiteState>()(
             },
 
             fetchSiteSettings: async () => {
-                const { data, error } = await supabase.from('settings').select('*').eq('id', 1).single()
-                if (error && error.code !== 'PGRST116') throw error // PGRST116 is single row not found
-                if (data) {
-                    set({ siteSettings: data as SiteSettings })
+                try {
+                    const { data, error } = await supabase.from('settings').select('*').eq('id', 1).single()
+                    if (error && error.code !== 'PGRST116' && error.code !== 'PGRST205') throw error
+                    if (data) {
+                        set({ siteSettings: data as SiteSettings })
+                    }
+                } catch (e: any) {
+                    if (e.code !== 'PGRST116' && e.code !== 'PGRST205') {
+                        console.error('Error fetching site settings:', e)
+                    }
                 }
             },
 

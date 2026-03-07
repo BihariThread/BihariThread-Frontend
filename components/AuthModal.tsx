@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { X, Phone, ShieldCheck, ArrowRight, Loader2, Lock, Eye, EyeOff, Key, User as UserIcon, Save, ShoppingBag, ChevronRight, ArrowLeft } from 'lucide-react';
-import { useAuthStore } from '@/store/authStore';
+import { X, Mail, ArrowRight, Loader2, Lock, Eye, EyeOff, User as UserIcon, Save, ShoppingBag, ChevronRight, ArrowLeft, Phone, MapPin, ShieldCheck } from 'lucide-react'; import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
 import Image from 'next/image';
 
@@ -11,11 +10,10 @@ export default function AuthModal() {
     const {
         showAuthModal,
         closeAuthModal,
-        sendOTP,
-        verifyOTP,
-        completeProfile,
-        checkUser,
-        loginWithPassword,
+        loginWithEmail,
+        registerWithEmail,
+        verifyEmailOTP,
+        sendPasswordReset,
         updateFullProfile,
         fetchOrders,
         updatePassword,
@@ -24,16 +22,16 @@ export default function AuthModal() {
         isLoggedIn
     } = useAuthStore();
 
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [otpCode, setOtpCode] = useState('');
-    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [name, setName] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
 
     // Address fields
     const [addressLine1, setAddressLine1] = useState('');
     const [city, setCity] = useState('');
     const [state, setState] = useState('');
     const [pincode, setPincode] = useState('');
+    const [showAddress, setShowAddress] = useState(false);
 
     // Password fields
     const [password, setPassword] = useState('');
@@ -41,18 +39,17 @@ export default function AuthModal() {
     const [showPassword, setShowPassword] = useState(false);
 
     const [loading, setLoading] = useState(false);
-    const [view, setView] = useState<'phone' | 'otp' | 'profile' | 'password-login' | 'reset-password' | 'edit-profile' | 'orders' | 'order-detail'>('phone');
-    const [isResetFlow, setIsResetFlow] = useState(false);
+    const [view, setView] = useState<'login' | 'register' | 'email-otp' | 'forgot-password' | 'reset-password' | 'edit-profile' | 'orders' | 'order-detail'>('login');
+    const [otpCode, setOtpCode] = useState('');
     const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
     useEffect(() => {
         if (!showAuthModal) {
             // Reset state on close
-            setView('phone');
-            setPhoneNumber('');
-            setOtpCode('');
-            setName('');
+            setView('login');
             setEmail('');
+            setName('');
+            setPhoneNumber('');
             setAddressLine1('');
             setCity('');
             setState('');
@@ -60,7 +57,8 @@ export default function AuthModal() {
             setPassword('');
             setConfirmPassword('');
             setShowPassword(false);
-            setIsResetFlow(false);
+            setShowAddress(false);
+            setOtpCode('');
             setSelectedOrder(null);
         } else if (isLoggedIn && user) {
             // When opening while logged in, switch to edit-profile and fill data
@@ -87,120 +85,116 @@ export default function AuthModal() {
         }
     }, [showAuthModal, isLoggedIn, user, fetchOrders]);
 
-    const handleContinue = async (e: React.FormEvent) => {
+    // ── Login ──
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!phoneNumber || phoneNumber.length < 10) {
-            toast.error('Please enter a valid phone number');
+        if (!email || !password) {
+            toast.error('Please enter email and password');
             return;
         }
 
         setLoading(true);
         try {
-            const { exists, hasName, hasPassword } = await checkUser(phoneNumber);
-            if (exists && hasName && hasPassword) {
-                setView('password-login');
-            } else {
-                await sendOTP(phoneNumber);
-                setView('otp');
-                toast.success('OTP sent successfully!');
-            }
-        } catch (error: any) {
-            console.error('Error in handleContinue:', error);
-            // Fallback to OTP if check fails
-            try {
-                await sendOTP(phoneNumber);
-                setView('otp');
-                toast.success('OTP sent successfully!');
-            } catch (otpErr: any) {
-                toast.error(otpErr.message || 'Failed to proceed. Please try again.');
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handlePasswordLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!password) {
-            toast.error('Please enter your password');
-            return;
-        }
-
-        setLoading(true);
-        try {
-            await loginWithPassword(phoneNumber, password);
+            await loginWithEmail(email, password);
             toast.success('Logged in successfully!');
-            closeAuthModal();
         } catch (error: any) {
             console.error('Login error:', error);
-            toast.error(error.message || 'Invalid password. Please try again.');
+            toast.error(error.message || 'Invalid credentials. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleLoginWithOTPInstead = async () => {
-        setLoading(true);
-        try {
-            await sendOTP(phoneNumber);
-            setView('otp');
-            toast.success('OTP sent successfully!');
-        } catch (error: any) {
-            console.error('OTP error:', error);
-            toast.error('Failed to send OTP');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleVerifyOTP = async (e: React.FormEvent) => {
+    // ── Register ──
+    const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!otpCode || otpCode.length !== 6) {
-            toast.error('Please enter a 6-digit OTP');
+        if (!name.trim() || !email || !password) {
+            toast.error('Please fill in all required fields');
+            return;
+        }
+        if (password.length < 6) {
+            toast.error('Password must be at least 6 characters');
+            return;
+        }
+        if (password !== confirmPassword) {
+            toast.error('Passwords do not match');
             return;
         }
 
         setLoading(true);
         try {
-            const { isNewUser } = await verifyOTP(phoneNumber, otpCode);
-            if (isResetFlow) {
-                if (isNewUser) {
-                    setView('profile');
-                    toast.info('Account not completed. Please setup your profile.');
-                } else {
-                    setView('reset-password');
-                }
-            } else if (isNewUser) {
-                setView('profile');
-                toast.info('Welcome! Please complete your profile.');
-            } else {
-                toast.success('Logged in successfully!');
-                closeAuthModal();
-            }
+            const addressData = showAddress && addressLine1 ? {
+                fullName: name,
+                phone: `+91${phoneNumber}`,
+                addressLine1,
+                city,
+                state,
+                pincode,
+                type: 'billing' as const
+            } : undefined;
+
+            await registerWithEmail(name, email, phoneNumber, password, addressData);
+            setView('email-otp');
+            toast.success('OTP sent to your email!');
         } catch (error: any) {
-            console.error('Error verifying OTP:', error);
+            console.error('Register error:', error);
+            toast.error(error.message || 'Registration failed. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ── Verify Email OTP ──
+    const handleVerifyOTP = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!otpCode || otpCode.length !== 8) {
+            toast.error('Please enter an 8-digit OTP');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const addressData = showAddress && addressLine1 ? {
+                fullName: name,
+                phone: `+91${phoneNumber}`,
+                addressLine1,
+                city,
+                state,
+                pincode,
+                type: 'billing' as const
+            } : undefined;
+
+            await verifyEmailOTP(email, otpCode, name, phoneNumber, addressData);
+            toast.success('Account verified successfully! Welcome to BihariThread!');
+        } catch (error: any) {
+            console.error('OTP verification error:', error);
             toast.error(error.message || 'Invalid OTP. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleForgotPassword = async () => {
+    // ── Forgot Password ──
+    const handleForgotPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!email) {
+            toast.error('Please enter your email');
+            return;
+        }
+
         setLoading(true);
         try {
-            await sendOTP(phoneNumber);
-            setIsResetFlow(true);
-            setView('otp');
-            setOtpCode('');
-            toast.success('OTP sent for password reset!');
+            await sendPasswordReset(email);
+            toast.success('Password reset link sent to your email!');
         } catch (error: any) {
-            console.error('Error sending reset OTP:', error);
-            toast.error('Failed to send OTP. Please try again.');
+            console.error('Reset error:', error);
+            toast.error(error.message || 'Failed to send reset link.');
         } finally {
             setLoading(false);
         }
     };
 
+    // ── Reset Password (callback from email link) ──
     const handleResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
         if (password.length < 6) {
@@ -225,52 +219,11 @@ export default function AuthModal() {
         }
     };
 
-    const handleProfileSetup = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!name.trim() || !addressLine1.trim() || !city.trim() || !state.trim() || !pincode.trim()) {
-            toast.error('Please fill in all required fields');
-            return;
-        }
-
-        if (password) {
-            if (password.length < 6) {
-                toast.error('Password must be at least 6 characters');
-                return;
-            }
-            if (password !== confirmPassword) {
-                toast.error('Passwords do not match');
-                return;
-            }
-        }
-
-        setLoading(true);
-        try {
-            await completeProfile(
-                { name, email, password },
-                {
-                    fullName: name,
-                    phone: `+91${phoneNumber}`,
-                    addressLine1,
-                    city,
-                    state,
-                    pincode,
-                    type: 'billing'
-                }
-            );
-            toast.success('Welcome to BihariThread!');
-            closeAuthModal();
-        } catch (error: any) {
-            console.error('Profile setup error:', error);
-            toast.error(error.message || 'Failed to complete profile setup');
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // ── Update Profile ──
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name.trim() || !addressLine1.trim() || !city.trim() || !state.trim() || !pincode.trim()) {
-            toast.error('Please fill in all required fields');
+        if (!name.trim()) {
+            toast.error('Please enter your name');
             return;
         }
 
@@ -316,21 +269,21 @@ export default function AuthModal() {
                         <div className="flex justify-between items-center">
                             <div>
                                 <Dialog.Title className="text-xl font-montserrat font-bold text-foreground">
-                                    {view === 'phone' && 'Welcome to Bihari Thread'}
-                                    {view === 'password-login' && 'Welcome back'}
-                                    {view === 'reset-password' && 'Reset Password'}
-                                    {view === 'otp' && 'Verify OTP'}
-                                    {view === 'profile' && 'Complete Profile'}
+                                    {view === 'login' && 'Welcome Back'}
+                                    {view === 'register' && 'Create Account'}
+                                    {view === 'email-otp' && 'Verify Email'}
+                                    {view === 'forgot-password' && 'Reset Password'}
+                                    {view === 'reset-password' && 'New Password'}
                                     {view === 'edit-profile' && 'My Profile'}
                                     {view === 'orders' && 'Order History'}
                                     {view === 'order-detail' && 'Order Details'}
                                 </Dialog.Title>
                                 <p className="text-muted-foreground text-xs mt-1">
-                                    {view === 'phone' && 'Enter your phone to continue'}
-                                    {view === 'password-login' && `Enter password for ${phoneNumber}`}
+                                    {view === 'login' && 'Sign in to your account'}
+                                    {view === 'register' && 'Join BihariThread today'}
+                                    {view === 'email-otp' && `Code sent to ${email}`}
+                                    {view === 'forgot-password' && 'We\'ll send a reset link to your email'}
                                     {view === 'reset-password' && 'Create a new strong password'}
-                                    {view === 'otp' && `Code sent to ${phoneNumber}`}
-                                    {view === 'profile' && 'Almost there! Just a few more details'}
                                     {view === 'edit-profile' && 'Manage your account and settings'}
                                     {view === 'orders' && 'List of your recent purchases'}
                                     {view === 'order-detail' && `Order ID: ${selectedOrder?.id?.slice(0, 8)}...`}
@@ -346,54 +299,30 @@ export default function AuthModal() {
 
                     {/* Content */}
                     <div className="flex-grow overflow-y-auto p-6">
-                        {view === 'phone' && (
-                            <form onSubmit={handleContinue} className="space-y-6">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-foreground uppercase tracking-wider">Phone Number</label>
-                                    <div className="relative flex items-center">
-                                        <div className="absolute left-4 flex items-center gap-1.5 text-muted-foreground border-r border-border pr-3">
-                                            <Phone size={16} />
-                                            <span className="text-sm font-bold text-foreground">+91</span>
-                                        </div>
+
+                        {/* ═══════════ LOGIN VIEW ═══════════ */}
+                        {view === 'login' && (
+                            <form onSubmit={handleLogin} className="space-y-5">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Email Address</label>
+                                    <div className="relative">
+                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                                         <input
-                                            type="tel"
-                                            name="phone"
-                                            autoComplete="tel"
-                                            value={phoneNumber}
-                                            onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                            placeholder="Enter 10 digit number"
-                                            className="w-full pl-24 pr-4 py-3.5 bg-muted/30 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium tracking-wider"
+                                            type="email"
+                                            name="email"
+                                            autoComplete="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            placeholder="you@example.com"
+                                            className="w-full pl-12 pr-4 py-3.5 bg-muted/30 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium"
                                             required
+                                            autoFocus
                                         />
                                     </div>
                                 </div>
-                                <button
-                                    type="submit"
-                                    disabled={loading || phoneNumber.length < 10}
-                                    className="w-full bg-primary text-primary-foreground hover:opacity-90 py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 group disabled:opacity-50 shadow-lg shadow-primary/10"
-                                >
-                                    {loading ? <Loader2 className="animate-spin" size={20} /> : (
-                                        <>
-                                            Get Started
-                                            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                                        </>
-                                    )}
-                                </button>
-                            </form>
-                        )}
 
-                        {view === 'password-login' && (
-                            <form onSubmit={handlePasswordLogin} className="space-y-6">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-foreground uppercase tracking-wider">Password</label>
-                                    <input
-                                        type="text"
-                                        name="username"
-                                        value={phoneNumber}
-                                        readOnly
-                                        style={{ display: 'none' }}
-                                        autoComplete="username"
-                                    />
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Password</label>
                                     <div className="relative">
                                         <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                                         <input
@@ -405,7 +334,6 @@ export default function AuthModal() {
                                             placeholder="••••••••"
                                             className="w-full pl-12 pr-12 py-3.5 bg-muted/30 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                                             required
-                                            autoFocus
                                         />
                                         <button
                                             type="button"
@@ -418,33 +346,280 @@ export default function AuthModal() {
                                     <div className="flex justify-end">
                                         <button
                                             type="button"
-                                            onClick={handleForgotPassword}
+                                            onClick={() => { setView('forgot-password'); setPassword(''); }}
                                             className="text-xs text-primary hover:underline font-bold"
                                         >
-                                            Reset Password?
+                                            Forgot Password?
                                         </button>
                                     </div>
                                 </div>
-                                <div className="flex flex-col gap-4">
+
+                                <button
+                                    type="submit"
+                                    disabled={loading || !email || !password}
+                                    className="w-full bg-primary text-primary-foreground hover:opacity-90 py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-primary/10"
+                                >
+                                    {loading ? <Loader2 className="animate-spin" size={20} /> : 'Login'}
+                                </button>
+
+                                <p className="text-center text-sm text-muted-foreground">
+                                    Don&apos;t have an account?{' '}
+                                    <button
+                                        type="button"
+                                        onClick={() => { setView('register'); setPassword(''); setConfirmPassword(''); }}
+                                        className="text-primary font-bold hover:underline"
+                                    >
+                                        Register
+                                    </button>
+                                </p>
+                            </form>
+                        )}
+
+                        {/* ═══════════ REGISTER VIEW ═══════════ */}
+                        {view === 'register' && (
+                            <form onSubmit={handleRegister} className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Full Name *</label>
+                                    <div className="relative">
+                                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                                        <input
+                                            type="text"
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            placeholder="Your full name"
+                                            className="w-full pl-12 pr-4 py-3.5 bg-muted/30 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium"
+                                            required
+                                            autoFocus
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Email Address *</label>
+                                    <div className="relative">
+                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                                        <input
+                                            type="email"
+                                            name="email"
+                                            autoComplete="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            placeholder="you@example.com"
+                                            className="w-full pl-12 pr-4 py-3.5 bg-muted/30 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Phone Number</label>
+                                    <div className="relative flex items-center">
+                                        <div className="absolute left-4 flex items-center gap-1.5 text-muted-foreground border-r border-border pr-3">
+                                            <Phone size={16} />
+                                            <span className="text-sm font-bold text-foreground">+91</span>
+                                        </div>
+                                        <input
+                                            type="tel"
+                                            name="phone"
+                                            autoComplete="tel"
+                                            value={phoneNumber}
+                                            onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                            placeholder="10 digit number"
+                                            className="w-full pl-24 pr-4 py-3.5 bg-muted/30 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium tracking-wider"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Password *</label>
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword ? 'text' : 'password'}
+                                                name="new-password"
+                                                autoComplete="new-password"
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                placeholder="6+ chars"
+                                                className="w-full px-4 py-3.5 bg-muted/30 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-sm"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Confirm *</label>
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword ? 'text' : 'password'}
+                                                value={confirmPassword}
+                                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                                placeholder="Repeat"
+                                                className="w-full px-4 py-3.5 bg-muted/30 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-sm"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                                    >
+                                        {showPassword ? <EyeOff size={12} /> : <Eye size={12} />}
+                                        {showPassword ? 'Hide' : 'Show'} password
+                                    </button>
+                                </div>
+
+                                {/* Optional Address */}
+                                <div className="border-t border-border pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAddress(!showAddress)}
+                                        className="flex items-center gap-2 text-xs text-primary font-bold hover:underline"
+                                    >
+                                        <MapPin size={14} />
+                                        {showAddress ? 'Hide' : 'Add'} Delivery Address (Optional)
+                                    </button>
+
+                                    {showAddress && (
+                                        <div className="mt-3 space-y-3">
+                                            <input
+                                                type="text"
+                                                value={addressLine1}
+                                                onChange={(e) => setAddressLine1(e.target.value)}
+                                                placeholder="Flat, House no, Building, Street"
+                                                className="w-full px-4 py-3 bg-muted/20 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-medium"
+                                            />
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <input
+                                                    type="text"
+                                                    value={city}
+                                                    onChange={(e) => setCity(e.target.value)}
+                                                    placeholder="City"
+                                                    className="w-full px-4 py-3 bg-muted/20 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-medium"
+                                                />
+                                                <input
+                                                    type="text"
+                                                    value={state}
+                                                    onChange={(e) => setState(e.target.value)}
+                                                    placeholder="State"
+                                                    className="w-full px-4 py-3 bg-muted/20 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-medium"
+                                                />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={pincode}
+                                                onChange={(e) => setPincode(e.target.value)}
+                                                placeholder="Pincode"
+                                                className="w-full px-4 py-3 bg-muted/20 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-medium"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={loading || !name.trim() || !email || password.length < 6 || password !== confirmPassword}
+                                    className="w-full bg-primary text-primary-foreground hover:opacity-90 py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-primary/10"
+                                >
+                                    {loading ? <Loader2 className="animate-spin" size={20} /> : (
+                                        <>
+                                            Create Account
+                                            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                        </>
+                                    )}
+                                </button>
+
+                                <p className="text-center text-sm text-muted-foreground">
+                                    Already have an account?{' '}
+                                    <button
+                                        type="button"
+                                        onClick={() => { setView('login'); setPassword(''); setConfirmPassword(''); }}
+                                        className="text-primary font-bold hover:underline"
+                                    >
+                                        Login
+                                    </button>
+                                </p>
+                            </form>
+                        )}
+
+                        {/* ═══════════ EMAIL OTP VIEW ═══════════ */}
+                        {view === 'email-otp' && (
+                            <form onSubmit={handleVerifyOTP} className="space-y-6">
+                                <div className="space-y-4">
+                                    <label className="text-xs font-bold text-foreground uppercase tracking-wider text-center block">Enter 8-digit OTP</label>
+                                    <div className="relative">
+                                        <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                                        <input
+                                            type="text"
+                                            value={otpCode}
+                                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                                            placeholder="00000000"
+                                            className="w-full pl-12 pr-4 py-4 bg-muted/30 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-bold tracking-[0.4em] text-center text-lg"
+                                            required
+                                            autoFocus
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-3">
                                     <button
                                         type="submit"
-                                        disabled={loading || !password}
+                                        disabled={loading || otpCode.length !== 8}
                                         className="w-full bg-primary text-primary-foreground hover:opacity-90 py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-primary/10"
                                     >
-                                        {loading ? <Loader2 className="animate-spin" size={20} /> : 'Login'}
+                                        {loading ? <Loader2 className="animate-spin" size={20} /> : 'Verify Account'}
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={handleLoginWithOTPInstead}
-                                        disabled={loading}
-                                        className="text-sm text-primary hover:bg-primary/5 py-2.5 rounded-lg border border-primary/20 font-bold flex items-center justify-center gap-2 transition-all"
+                                        onClick={() => setView('register')}
+                                        className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors text-center py-2"
                                     >
-                                        <Key size={16} /> Login with OTP instead
+                                        Wrong email? Go back
                                     </button>
                                 </div>
                             </form>
                         )}
 
+                        {/* ═══════════ FORGOT PASSWORD VIEW ═══════════ */}
+                        {view === 'forgot-password' && (
+                            <form onSubmit={handleForgotPassword} className="space-y-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Email Address</label>
+                                    <div className="relative">
+                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                                        <input
+                                            type="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            placeholder="you@example.com"
+                                            className="w-full pl-12 pr-4 py-3.5 bg-muted/30 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium"
+                                            required
+                                            autoFocus
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={loading || !email}
+                                    className="w-full bg-primary text-primary-foreground hover:opacity-90 py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-primary/10"
+                                >
+                                    {loading ? <Loader2 className="animate-spin" size={20} /> : 'Send Reset Link'}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setView('login')}
+                                    className="w-full flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                                >
+                                    <ArrowLeft size={14} /> Back to Login
+                                </button>
+                            </form>
+                        )}
+
+                        {/* ═══════════ RESET PASSWORD VIEW ═══════════ */}
                         {view === 'reset-password' && (
                             <form onSubmit={handleResetPassword} className="space-y-6">
                                 <div className="space-y-4">
@@ -495,63 +670,26 @@ export default function AuthModal() {
                             </form>
                         )}
 
-                        {view === 'otp' && (
-                            <form onSubmit={handleVerifyOTP} className="space-y-6">
-                                <div className="space-y-4">
-                                    <label className="text-xs font-bold text-foreground uppercase tracking-wider text-center block">Enter 6-digit OTP</label>
-                                    <div className="relative">
-                                        <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                                        <input
-                                            type="text"
-                                            value={otpCode}
-                                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                            placeholder="000 000"
-                                            className="w-full pl-12 pr-4 py-4 bg-muted/30 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-bold tracking-[0.4em] text-center text-lg"
-                                            required
-                                            autoFocus
-                                        />
-                                    </div>
-                                </div>
-                                <div className="flex flex-col gap-3">
-                                    <button
-                                        type="submit"
-                                        disabled={loading || otpCode.length !== 6}
-                                        className="w-full bg-primary text-primary-foreground hover:opacity-90 py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-primary/10"
-                                    >
-                                        {loading ? <Loader2 className="animate-spin" size={20} /> : 'Verify Code'}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setView('phone')}
-                                        className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors text-center py-2"
-                                    >
-                                        Entered wrong number? Change it
-                                    </button>
-                                </div>
-                            </form>
-                        )}
-
-                        {(view === 'profile' || view === 'edit-profile') && (
+                        {/* ═══════════ EDIT PROFILE VIEW ═══════════ */}
+                        {view === 'edit-profile' && (
                             <div className="space-y-6">
-                                {view === 'edit-profile' && (
-                                    <button
-                                        onClick={() => setView('orders')}
-                                        className="w-full flex items-center justify-between p-4 bg-muted/20 border border-border rounded-xl hover:bg-muted/30 transition-all group"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                                                <ShoppingBag size={20} />
-                                            </div>
-                                            <div className="text-left">
-                                                <p className="text-sm font-bold">My Orders</p>
-                                                <p className="text-[10px] text-muted-foreground">View order status & history</p>
-                                            </div>
+                                <button
+                                    onClick={() => setView('orders')}
+                                    className="w-full flex items-center justify-between p-4 bg-muted/20 border border-border rounded-xl hover:bg-muted/30 transition-all group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                                            <ShoppingBag size={20} />
                                         </div>
-                                        <ChevronRight size={18} className="text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                                    </button>
-                                )}
+                                        <div className="text-left">
+                                            <p className="text-sm font-bold">My Orders</p>
+                                            <p className="text-[10px] text-muted-foreground">View order status & history</p>
+                                        </div>
+                                    </div>
+                                    <ChevronRight size={18} className="text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                                </button>
 
-                                <form onSubmit={view === 'profile' ? handleProfileSetup : handleUpdateProfile} className="space-y-4">
+                                <form onSubmit={handleUpdateProfile} className="space-y-4">
                                     <div className="grid grid-cols-1 gap-4">
                                         <div className="space-y-1.5">
                                             <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Full Name</label>
@@ -582,7 +720,6 @@ export default function AuthModal() {
                                                 onChange={(e) => setAddressLine1(e.target.value)}
                                                 placeholder="Flat, House no, Building, Street"
                                                 className="w-full px-4 py-3 bg-muted/20 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-medium"
-                                                required
                                             />
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
@@ -594,7 +731,6 @@ export default function AuthModal() {
                                                     onChange={(e) => setCity(e.target.value)}
                                                     placeholder="City"
                                                     className="w-full px-4 py-3 bg-muted/20 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-medium"
-                                                    required
                                                 />
                                             </div>
                                             <div className="space-y-1.5">
@@ -605,7 +741,6 @@ export default function AuthModal() {
                                                     onChange={(e) => setState(e.target.value)}
                                                     placeholder="State"
                                                     className="w-full px-4 py-3 bg-muted/20 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-medium"
-                                                    required
                                                 />
                                             </div>
                                         </div>
@@ -617,55 +752,19 @@ export default function AuthModal() {
                                                 onChange={(e) => setPincode(e.target.value)}
                                                 placeholder="6 digit PIN"
                                                 className="w-full px-4 py-3 bg-muted/20 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-medium"
-                                                required
                                             />
                                         </div>
-
-                                        {view === 'profile' && (
-                                            <div className="pt-4 border-t border-border mt-2 space-y-4">
-                                                <p className="text-[10px] font-black text-primary uppercase tracking-tighter">Set Password (Fast Login)</p>
-                                                <div className="space-y-1.5">
-                                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Password</label>
-                                                    <div className="relative">
-                                                        <input
-                                                            type={showPassword ? 'text' : 'password'}
-                                                            value={password}
-                                                            onChange={(e) => setPassword(e.target.value)}
-                                                            placeholder="6+ characters"
-                                                            className="w-full px-4 py-3 bg-muted/20 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-medium"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setShowPassword(!showPassword)}
-                                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-                                                        >
-                                                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div className="space-y-1.5">
-                                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Confirm Password</label>
-                                                    <input
-                                                        type={showPassword ? 'text' : 'password'}
-                                                        value={confirmPassword}
-                                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                                        placeholder="Repeat password"
-                                                        className="w-full px-4 py-3 bg-muted/20 border border-border rounded-xl text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm font-medium"
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
 
                                     <button
                                         type="submit"
-                                        disabled={loading || !name.trim() || !addressLine1.trim() || !city.trim() || !state.trim() || !pincode.trim()}
+                                        disabled={loading || !name.trim()}
                                         className="w-full bg-primary text-primary-foreground hover:opacity-90 py-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-6 shadow-lg shadow-primary/10"
                                     >
                                         {loading ? <Loader2 className="animate-spin" size={20} /> : (
                                             <>
                                                 <Save size={18} />
-                                                {view === 'profile' ? 'Complete Account Setup' : 'Save Changes'}
+                                                Save Changes
                                             </>
                                         )}
                                     </button>
@@ -673,6 +772,7 @@ export default function AuthModal() {
                             </div>
                         )}
 
+                        {/* ═══════════ ORDERS VIEW ═══════════ */}
                         {view === 'orders' && (
                             <div className="space-y-4">
                                 <button
@@ -727,6 +827,7 @@ export default function AuthModal() {
                             </div>
                         )}
 
+                        {/* ═══════════ ORDER DETAIL VIEW ═══════════ */}
                         {view === 'order-detail' && selectedOrder && (
                             <div className="space-y-6">
                                 <button
@@ -793,7 +894,7 @@ export default function AuthModal() {
                     </div>
 
                     {/* Footer - Only for auth views */}
-                    {(view === 'phone' || view === 'password-login' || view === 'otp') && (
+                    {(view === 'login' || view === 'register' || view === 'email-otp' || view === 'forgot-password') && (
                         <div className="p-6 border-t border-border text-center bg-muted/5">
                             <p className="text-[10px] text-muted-foreground">
                                 By continuing, you agree to our <span className="text-foreground font-bold hover:underline cursor-pointer">Terms of Service</span> and <span className="text-foreground font-bold hover:underline cursor-pointer">Privacy Policy</span>.

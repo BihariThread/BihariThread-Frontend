@@ -1,11 +1,13 @@
 'use client'
 
 import { useSiteStore } from '@/store/siteStore'
-import { TrendingUp, ShoppingCart, AlertCircle, Users as UsersIcon, ArrowUpRight, ArrowDownRight, Package } from 'lucide-react'
+import { TrendingUp, ShoppingCart, AlertCircle, Users as UsersIcon, ArrowUpRight, ArrowDownRight, Package, X } from 'lucide-react'
 import Link from 'next/link'
+import { useState } from 'react'
 
 export default function AdminDashboard() {
   const { products, orders, users, enquiries } = useSiteStore()
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
 
   const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0)
   const pendingOrders = orders.filter((o) => o.status === 'pending' || o.status === 'confirmed').length
@@ -112,19 +114,43 @@ export default function AdminDashboard() {
                 {orders.slice(0, 5).map((order) => (
                   <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors duration-200">
                     <td className="py-3 px-4 font-medium">{order.id}</td>
-                    <td className="py-3 px-4">{order.customerName || (order.shippingAddress as any)?.fullName || 'Anonymous'}</td>
+                    <td className="py-3 px-4">
+                      <div className="flex flex-col">
+                        <span className="font-semibold">{order.customerName || (order.shippingAddress as any)?.fullName || 'Anonymous'}</span>
+                        {order.items && order.items.length > 0 && (
+                          <div className="flex -space-x-3 mt-2">
+                            {order.items.slice(0, 3).map((item, idx) => (
+                              <div
+                                key={idx}
+                                onClick={() => item.product?.image && setSelectedImage(item.product.image)}
+                                className="w-12 h-12 rounded-full border-2 border-background overflow-hidden relative bg-muted shadow-sm hover:z-20 transition-transform hover:scale-110 cursor-pointer"
+                                title={`${item.product?.name} (${item.size})`}
+                              >
+                                {item.product?.image ? (
+                                  <img src={item.product?.image} alt="" className="object-cover w-full h-full" />
+                                ) : (
+                                  <span className="flex items-center justify-center w-full h-full text-xs text-muted-foreground">?</span>
+                                )}
+                              </div>
+                            ))}
+                            {order.items.length > 3 && (
+                              <div className="w-12 h-12 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs font-bold z-10 shadow-sm">
+                                +{order.items.length - 3}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
 
                     <td className="py-3 px-4 text-right font-medium">₹{order.total}</td>
                     <td className="py-3 px-4 text-center">
-                      <span
-                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${order.status === 'delivered'
-                          ? 'bg-green-100 text-green-700'
-                          : order.status === 'confirmed'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-yellow-100 text-yellow-700'
-                          }`}
-                      >
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize whitespace-nowrap
+                        ${order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                          order.status === 'processing' || order.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                            order.status === 'not accepted' ? 'bg-red-100 text-red-800' :
+                              'bg-orange-100 text-orange-800'}`}>
+                        {order.status}
                       </span>
                     </td>
                   </tr>
@@ -165,6 +191,30 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full flex justify-center items-center">
+            <button
+              className="absolute -top-12 right-0 text-white bg-white/20 hover:bg-white/40 rounded-full p-2 transition-colors"
+              onClick={() => setSelectedImage(null)}
+              title="Close"
+            >
+              <X size={24} />
+            </button>
+            <img
+              src={selectedImage}
+              alt="Product View"
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

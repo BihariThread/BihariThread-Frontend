@@ -115,6 +115,10 @@ export default function CartPage() {
 
                     // We can optionally verify here, but the webhook will handle the status update reliably
                     toast.success('Payment successful! Your order is being processed.');
+
+                    // Tell authStore to refetch so it appears in Profile / Orders immediately
+                    useAuthStore.getState().fetchOrders();
+
                     clearCart();
                     setStep('success');
                 },

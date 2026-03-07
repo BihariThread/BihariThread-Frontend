@@ -12,6 +12,7 @@ export interface Product {
   sizes: string[];
   colors: string[];
   inStock: boolean;
+  stockQuantity: number;
   featured: boolean;
   new: boolean;
 }
@@ -53,7 +54,7 @@ export interface Order {
   customerName?: string;
   items: CartItem[];
   total: number;
-  status: 'pending' | 'paid' | 'confirmed' | 'shipped' | 'delivered' | 'failed';
+  status: 'pending' | 'processing' | 'not accepted' | 'paid' | 'confirmed' | 'shipped' | 'delivered' | 'failed';
   razorpay_order_id?: string;
   razorpay_payment_id?: string;
   razorpay_signature?: string;

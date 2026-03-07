@@ -44,6 +44,8 @@ const ProductCard = ({
       return
     }
 
+    const stockQty = props.stockQuantity ?? (props.inStock === false ? 0 : 50)
+
     const productData: Product = {
       id,
       name,
@@ -55,10 +57,11 @@ const ProductCard = ({
       images: [image],
       sizes: [],
       colors: [],
-      inStock: true,
       featured: false,
       new: false,
-      ...props
+      ...props,
+      inStock: stockQty > 0,
+      stockQuantity: stockQty
     }
 
     if (isFavorited) {
@@ -78,6 +81,12 @@ const ProductCard = ({
       return
     }
 
+    const stockQty = props.stockQuantity ?? (props.inStock === false ? 0 : 50)
+    if (stockQty <= 0 || props.inStock === false) {
+      toast.error('Sorry, this product is currently out of stock')
+      return;
+    }
+
     const productData: Product = {
       id,
       name,
@@ -89,15 +98,18 @@ const ProductCard = ({
       images: [image],
       sizes: [],
       colors: [],
-      inStock: true,
       featured: false,
       new: false,
-      ...props
+      ...props,
+      inStock: stockQty > 0,
+      stockQuantity: stockQty
     }
 
     addToCart(productData, 'M', 'Default') // Default values for quick add
     toast.success('Added to cart')
   }
+
+  const outOfStock = props.inStock === false || (props.stockQuantity !== undefined && props.stockQuantity <= 0);
 
   return (
     <motion.div
@@ -116,27 +128,36 @@ const ProductCard = ({
             src={image}
             alt={name}
             fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className={`object-cover transition-transform duration-700 ease-in-out ${isHovered ? 'scale-110' : 'scale-100'
-              }`}
+              } ${outOfStock ? 'opacity-70 grayscale' : ''}`}
             priority={priority}
           />
+          {outOfStock && (
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/70 text-white px-3 py-1 rounded-md text-sm font-bold shadow-lg z-10 whitespace-nowrap border border-white/20">
+              OUT OF STOCK
+            </div>
+          )}
 
           {/* Overlay Actions */}
           <div
             className={`absolute inset-0 bg-black/20 transition-opacity duration-300 flex items-center justify-center gap-4 ${isHovered ? 'opacity-100' : 'opacity-0'
               }`}
           >
-            <button
-              onClick={handleAddToCart}
-              className="bg-background text-foreground p-3 rounded-full hover:bg-primary hover:text-primary-foreground transition-all duration-200 transform hover:scale-110 shadow-lg"
-              title="Add to Cart"
-            >
-              <ShoppingCart size={20} />
-            </button>
+            {!outOfStock && (
+              <button
+                onClick={handleAddToCart}
+                className="bg-background text-foreground p-3 rounded-full hover:bg-primary hover:text-primary-foreground transition-all duration-200 transform hover:scale-110 shadow-lg"
+                title="Add to Cart"
+              >
+                <ShoppingCart size={20} />
+              </button>
+            )}
             <button className="bg-background text-foreground p-3 rounded-full hover:bg-primary hover:text-primary-foreground transition-all duration-200 transform hover:scale-110 shadow-lg" title="Quick View">
               <Eye size={20} />
             </button>
           </div>
+
 
           {/* Wishlist Button (Always visible on mobile, hover on desktop) */}
           <button

@@ -15,6 +15,7 @@ export const mockProducts: Product[] = [
     colors: ['Maroon', 'Navy', 'Black'],
     fabric: '100% Cotton',
     inStock: true,
+    stockQuantity: 50,
     new: false,
   },
   {
@@ -31,6 +32,7 @@ export const mockProducts: Product[] = [
     colors: ['Navy', 'White', 'Black'],
     fabric: '100% Cotton',
     inStock: true,
+    stockQuantity: 50,
     new: true,
   },
   {
@@ -47,6 +49,7 @@ export const mockProducts: Product[] = [
     colors: ['Yellow', 'Blue'],
     fabric: 'Polyester Blend',
     inStock: true,
+    stockQuantity: 50,
     new: false,
   },
   {
@@ -63,6 +66,7 @@ export const mockProducts: Product[] = [
     colors: ['Black', 'White'],
     fabric: '100% Cotton',
     inStock: true,
+    stockQuantity: 50,
     new: false,
   },
   {
@@ -79,6 +83,7 @@ export const mockProducts: Product[] = [
     colors: ['Multi'],
     fabric: '100% Cotton',
     inStock: true,
+    stockQuantity: 50,
     new: true,
   },
   {
@@ -95,6 +100,7 @@ export const mockProducts: Product[] = [
     colors: ['Off White', 'Yellow'],
     fabric: '100% Cotton',
     inStock: true,
+    stockQuantity: 50,
     new: false,
   },
   {
@@ -111,6 +117,7 @@ export const mockProducts: Product[] = [
     colors: ['Navy', 'Black'],
     fabric: 'Heavy Cotton',
     inStock: true,
+    stockQuantity: 50,
     new: true,
   },
   {
@@ -127,6 +134,7 @@ export const mockProducts: Product[] = [
     colors: ['Terracotta', 'Beige'],
     fabric: 'Premium Cotton',
     inStock: true,
+    stockQuantity: 50,
     new: false,
   },
 ]

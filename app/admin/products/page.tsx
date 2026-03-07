@@ -46,6 +46,7 @@ export default function AdminProducts() {
     sizes: 'XS, S, M, L, XL, XXL',
     colors: 'Black, White, Navy',
     inStock: true,
+    stockQuantity: 50,
     featured: false,
     new: false
   })
@@ -76,6 +77,7 @@ export default function AdminProducts() {
       sizes: product.sizes.join(', '),
       colors: product.colors.join(', '),
       inStock: product.inStock,
+      stockQuantity: product.stockQuantity ?? 50,
       featured: product.featured,
       new: product.new
     })
@@ -96,6 +98,7 @@ export default function AdminProducts() {
       sizes: 'XS, S, M, L, XL, XXL',
       colors: 'Black, White, Navy',
       inStock: true,
+      stockQuantity: 50,
       featured: false,
       new: true
     })
@@ -185,6 +188,7 @@ export default function AdminProducts() {
       sizes: formData.sizes.split(',').map((s: string) => s.trim()).filter(Boolean),
       colors: formData.colors.split(',').map((s: string) => s.trim()).filter(Boolean),
       inStock: formData.inStock,
+      stockQuantity: formData.stockQuantity,
       featured: formData.featured,
       new: formData.new
     }
@@ -550,6 +554,17 @@ export default function AdminProducts() {
                   />
                   <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">New Release</span>
                 </label>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Stock Quantity</label>
+                <input
+                  type="number"
+                  value={formData.stockQuantity}
+                  onChange={(e) => setFormData({ ...formData, stockQuantity: parseInt(e.target.value) || 0 })}
+                  required
+                  className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                  placeholder="e.g. 50"
+                />
               </div>
 
               <div className="pt-4 flex justify-end gap-3">

@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Poppins, Montserrat } from 'next/font/google'
 
 import './globals.css'
@@ -18,16 +18,17 @@ const montserrat = Montserrat({
   variable: '--font-montserrat'
 })
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+}
+
 export const metadata: Metadata = {
   title: 'BihariThread - Premium Fashion & Culture',
   description: 'Rooted in Bihar. Worn Everywhere. Discover authentic Bihari-inspired fashion with premium quality and cultural pride.',
   generator: 'v0.app',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 5,
-    userScalable: true,
-  },
   openGraph: {
     title: 'BihariThread - Premium Fashion & Culture',
     description: 'Rooted in Bihar. Worn Everywhere.',

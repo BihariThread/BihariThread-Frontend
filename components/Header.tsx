@@ -17,8 +17,11 @@ export default function Header() {
   const wishlistItems = useWishlistStore((state) => state.items)
   const { openAuthModal, user, isLoggedIn, logout } = useAuthStore()
 
-  // Handle scroll effect
+  const [mounted, setMounted] = useState(false)
+
+  // Handle scroll effect & mount status
   useEffect(() => {
+    setMounted(true)
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50)
     }
@@ -50,6 +53,7 @@ export default function Header() {
                   src="/logo.png"
                   alt="BIHARI THREAD"
                   fill
+                  sizes="(max-width: 768px) 160px, 200px"
                   className="object-contain"
                   priority
                 />
@@ -75,7 +79,7 @@ export default function Header() {
               <Link href="/wishlist">
                 <button className="p-2 hover:bg-muted rounded-lg transition-colors duration-200 relative">
                   <Heart size={20} className="text-foreground" />
-                  {wishlistItems.length > 0 && (
+                  {mounted && wishlistItems.length > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                       {wishlistItems.length}
                     </span>
@@ -86,7 +90,7 @@ export default function Header() {
               <Link href="/cart">
                 <button className="p-2 hover:bg-muted rounded-lg transition-colors duration-200 relative">
                   <ShoppingCart size={20} className="text-foreground" />
-                  {cartItemCount > 0 && (
+                  {mounted && cartItemCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                       {cartItemCount}
                     </span>
@@ -102,7 +106,7 @@ export default function Header() {
                   <div className="absolute right-0 mt-2 w-48 bg-background border border-border rounded-md shadow-lg py-1 px-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right">
                     <div className="px-4 py-2 border-b border-border">
                       <p className="text-sm font-medium truncate">{user?.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{user?.phone}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                     </div>
 
                     <button
@@ -163,7 +167,7 @@ export default function Header() {
                 <Link href="/wishlist" onClick={() => setIsOpen(false)}>
                   <button className="p-2 hover:bg-muted rounded-lg transition-colors duration-200 relative">
                     <Heart size={20} className="text-foreground" />
-                    {wishlistItems.length > 0 && (
+                    {mounted && wishlistItems.length > 0 && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                         {wishlistItems.length}
                       </span>
@@ -173,7 +177,7 @@ export default function Header() {
                 <Link href="/cart" onClick={() => setIsOpen(false)}>
                   <button className="p-2 hover:bg-muted rounded-lg transition-colors duration-200 relative">
                     <ShoppingCart size={20} className="text-foreground" />
-                    {cartItemCount > 0 && (
+                    {mounted && cartItemCount > 0 && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                         {cartItemCount}
                       </span>
